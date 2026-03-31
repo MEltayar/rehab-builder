@@ -85,7 +85,7 @@ export default function ProgramMetaForm({ draft, clients, errors, onChange }: Pr
         {errors.goal && <p className="text-xs text-red-500">{errors.goal}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Duration */}
         <div className="flex flex-col gap-1">
           <label className={labelClass}>

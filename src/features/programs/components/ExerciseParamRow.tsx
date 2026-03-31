@@ -11,7 +11,7 @@ interface ExerciseParamRowProps {
 }
 
 const numInputClass =
-  'w-16 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500';
+  'w-full px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500';
 
 export default function ExerciseParamRow({
   programExercise,
@@ -35,30 +35,32 @@ export default function ExerciseParamRow({
       style={style}
       className="flex flex-col gap-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md"
     >
+      {/* Name row */}
       <div className="flex items-center gap-2">
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 shrink-0"
+          className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 shrink-0 p-1 -ml-1"
           aria-label="Drag to reorder"
         >
-          <GripVertical size={16} />
+          <GripVertical size={18} />
         </button>
         <span className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
           {exerciseName}
         </span>
         <button
           onClick={onRemove}
-          className="shrink-0 p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="shrink-0 p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           aria-label={`Remove ${exerciseName}`}
         >
-          <Trash2 size={14} />
+          <Trash2 size={15} />
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 pl-6">
-        <label className="flex flex-col gap-0.5 items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Sets</span>
+      {/* Params — 2×2 grid on mobile, 4 columns on sm+ */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pl-6">
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Sets</span>
           <input
             type="number"
             value={programExercise.sets ?? ''}
@@ -72,8 +74,8 @@ export default function ExerciseParamRow({
           />
         </label>
 
-        <label className="flex flex-col gap-0.5 items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Reps</span>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Reps</span>
           <input
             type="text"
             value={programExercise.reps ?? ''}
@@ -81,12 +83,12 @@ export default function ExerciseParamRow({
               onUpdateParams({ reps: e.target.value || undefined })
             }
             placeholder="—"
-            className="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className={numInputClass}
           />
         </label>
 
-        <label className="flex flex-col gap-0.5 items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Hold (s)</span>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Hold (s)</span>
           <input
             type="number"
             value={programExercise.holdTime ?? ''}
@@ -100,8 +102,8 @@ export default function ExerciseParamRow({
           />
         </label>
 
-        <label className="flex flex-col gap-0.5 items-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Rest (s)</span>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Rest (s)</span>
           <input
             type="number"
             value={programExercise.restSeconds ?? ''}
@@ -116,13 +118,14 @@ export default function ExerciseParamRow({
         </label>
       </div>
 
+      {/* Notes */}
       <div className="pl-6">
         <input
           type="text"
           value={programExercise.notes ?? ''}
           onChange={(e) => onUpdateParams({ notes: e.target.value || undefined })}
           placeholder="Notes (optional)"
-          className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full px-2 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
     </div>

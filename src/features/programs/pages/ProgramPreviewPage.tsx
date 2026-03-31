@@ -190,7 +190,7 @@ export default function ProgramPreviewPage() {
     <div className="flex flex-col gap-6">
 
       {/* ── Top action bar ─────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           to={`/programs/${id}/edit`}
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
@@ -198,19 +198,15 @@ export default function ProgramPreviewPage() {
           ← Back to Edit
         </Link>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {/* Save as Template button */}
           <button
             onClick={() => setSaveAsTemplateOpen(true)}
-            className="
-              flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
-              bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-              border border-gray-300 dark:border-gray-600
-              hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm
-            "
+            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
           >
             <BookTemplate size={15} />
-            Save as Template
+            <span className="hidden sm:inline">Save as Template</span>
+            <span className="sm:hidden">Template</span>
           </button>
 
           <ExportDropdown
@@ -405,63 +401,70 @@ export default function ProgramPreviewPage() {
                     <p className="text-xs text-gray-400 dark:text-gray-500 italic">Empty session</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-                          <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Exercise
-                          </th>
-                          <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">
-                            Sets
-                          </th>
-                          <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">
-                            Reps
-                          </th>
-                          <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">
-                            Hold (s)
-                          </th>
-                          <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">
-                            Rest (s)
-                          </th>
-                          <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Notes
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {session.exercises.map((pe, ei) => (
-                          <tr
-                            key={pe.id}
-                            className={`border-b border-gray-50 dark:border-gray-700/50 last:border-b-0 ${
-                              ei % 2 === 0
-                                ? 'bg-white dark:bg-gray-800'
-                                : 'bg-gray-50/60 dark:bg-gray-900/30'
-                            }`}
-                          >
-                            <td className="px-5 py-3 font-semibold text-gray-900 dark:text-gray-100">
-                              {exerciseMap.get(pe.exerciseId) ?? 'Unknown exercise'}
-                            </td>
-                            <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
-                              {pe.sets ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
-                            </td>
-                            <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
-                              {pe.reps ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
-                            </td>
-                            <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
-                              {pe.holdTime ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
-                            </td>
-                            <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
-                              {pe.restSeconds ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
-                            </td>
-                            <td className="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">
-                              {pe.notes ?? ''}
-                            </td>
+                  <>
+                    {/* Mobile card list */}
+                    <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                      {session.exercises.map((pe) => (
+                        <div key={pe.id} className="px-4 py-3 flex flex-col gap-1">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {exerciseMap.get(pe.exerciseId) ?? 'Unknown exercise'}
+                          </p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            {pe.sets   != null && <span>Sets: <strong className="text-gray-700 dark:text-gray-300">{pe.sets}</strong></span>}
+                            {pe.reps   != null && <span>Reps: <strong className="text-gray-700 dark:text-gray-300">{pe.reps}</strong></span>}
+                            {pe.holdTime   != null && <span>Hold: <strong className="text-gray-700 dark:text-gray-300">{pe.holdTime}s</strong></span>}
+                            {pe.restSeconds != null && <span>Rest: <strong className="text-gray-700 dark:text-gray-300">{pe.restSeconds}s</strong></span>}
+                          </div>
+                          {pe.notes && <p className="text-xs text-gray-400 dark:text-gray-500 italic">{pe.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
+                            <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Exercise</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">Sets</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">Reps</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">Hold (s)</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">Rest (s)</th>
+                            <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Notes</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {session.exercises.map((pe, ei) => (
+                            <tr
+                              key={pe.id}
+                              className={`border-b border-gray-50 dark:border-gray-700/50 last:border-b-0 ${
+                                ei % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/60 dark:bg-gray-900/30'
+                              }`}
+                            >
+                              <td className="px-5 py-3 font-semibold text-gray-900 dark:text-gray-100">
+                                {exerciseMap.get(pe.exerciseId) ?? 'Unknown exercise'}
+                              </td>
+                              <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                                {pe.sets ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                              <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                                {pe.reps ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                              <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                                {pe.holdTime ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                              <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
+                                {pe.restSeconds ?? <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                              <td className="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                                {pe.notes ?? ''}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             );

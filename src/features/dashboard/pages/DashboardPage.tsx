@@ -371,7 +371,40 @@ export default function DashboardPage() {
             <CalendarDays size={16} className="text-violet-600 dark:text-violet-400" />
             <h2 className="font-semibold text-gray-900 dark:text-gray-100">Program Overview</h2>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+            {clients
+              .filter((c) => programCountByClient.has(c.id))
+              .sort((a, b) => {
+                const latestA = programs.filter((p) => p.clientId === a.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
+                const latestB = programs.filter((p) => p.clientId === b.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
+                return latestB.localeCompare(latestA);
+              })
+              .slice(0, 8)
+              .map((client) => {
+                const latestProgram = programs
+                  .filter((p) => p.clientId === client.id)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                if (!latestProgram) return null;
+                return (
+                  <div key={client.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <Link to={`/clients/${client.id}`} className="font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400 truncate block">
+                        {client.name}
+                      </Link>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{latestProgram.name || '—'}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{latestProgram.condition || '—'} · {fmtDate(latestProgram.startDate)} · {latestProgram.durationWeeks}w</p>
+                    </div>
+                    <Link to={`/programs/${latestProgram.id}/preview`} className="shrink-0 text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium">
+                      View
+                    </Link>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50">

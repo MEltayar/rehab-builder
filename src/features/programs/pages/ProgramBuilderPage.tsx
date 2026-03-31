@@ -157,8 +157,8 @@ export default function ProgramBuilderPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
           {isEditMode ? 'Edit Program' : 'New Program'}
         </h1>
         <div className="flex items-center gap-2">

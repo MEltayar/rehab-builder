@@ -50,7 +50,7 @@ export default function SessionCard({
         />
         <button
           onClick={onDelete}
-          className="shrink-0 p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="shrink-0 p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           aria-label={`Delete session ${session.label}`}
         >
           <Trash2 size={14} />
