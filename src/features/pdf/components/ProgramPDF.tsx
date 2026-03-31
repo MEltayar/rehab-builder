@@ -229,7 +229,7 @@ function buildStyles(C: ReturnType<typeof buildPalette>) {
     },
     chkReportTitle: { fontSize: 7, color: C.gray400, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Helvetica-Bold' },
     chkSessionBlock: { marginBottom: 10, paddingHorizontal: 28 },
-    chkSessionHeader: { paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.gray300, marginBottom: 4 },
+    chkSessionHeader: { paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.gray200, marginBottom: 4 },
     chkSessionLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.gray800 },
     chkRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4, gap: 8 },
     chkBox: {
@@ -2591,7 +2591,7 @@ export default function ProgramPDF({
             <GoalBox />
             {program.sessions.length === 0 ? (
               <View style={S.emptyNotice}><Text style={S.emptyNoticeText}>No sessions added</Text></View>
-            ) : program.sessions.map((session, si) => (
+            ) : program.sessions.map((session, _si) => (
               <View key={session.id} style={S.postSessionBlock}>
                 <View style={S.postSessionBanner} wrap={false}>
                   <Text style={S.postSessionLabel}>{session.label}</Text>

@@ -1,4 +1,5 @@
 import { pdf } from '@react-pdf/renderer';
+import type { DocumentProps } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
 import { createElement, type ReactElement, type ComponentType } from 'react';
 import type { Exercise, ExportTemplate, Program } from '../../../types';
@@ -84,7 +85,7 @@ export async function generatePDFBlob(
   // react-pdf/renderer's pdf() expects its own element type, not React.ReactElement.
   // We bridge via ComponentType cast to preserve prop-type checking on ProgramPDF.
   const element = createElement(ProgramPDF as ComponentType<PDFRenderContext>, context);
-  const blob = await pdf(element as ReactElement).toBlob();
+  const blob = await pdf(element as unknown as ReactElement<DocumentProps>).toBlob();
 
   return { blob, filename: sanitizeFilename(clientName, program.name) };
 }

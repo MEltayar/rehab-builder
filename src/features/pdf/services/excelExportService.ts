@@ -109,12 +109,6 @@ interface SessionInfo {
 
 // ── Progress dashboard sheet ──────────────────────────────
 
-function buildProgressFormula(firstRow: number, lastRow: number, total: number): string {
-  const countif = `COUNTIF('Program'!H${firstRow}:H${lastRow},"✓")`;
-  const pct = `IFERROR(${countif}/${total},0)`;
-  return `=${countif}&" / ${total}  "&REPT("█",ROUND(${pct}*15,0))&REPT("░",15-ROUND(${pct}*15,0))&"  "&TEXT(${pct},"0%")`;
-}
-
 function createProgressDashboard(
   workbook: ExcelJS.Workbook,
   program: Program,

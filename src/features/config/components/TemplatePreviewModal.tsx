@@ -473,7 +473,7 @@ function MagazinePreview({ cs }: { cs: CS }) {
     <div className="px-4 pt-3 pb-4">
       <p style={{ color: '#1e293b', fontWeight: 700, fontSize: 9, marginBottom: 6 }}>Day 1 — Morning</p>
       {EXERCISES.map((ex,i) => <div key={i} className="flex items-start gap-3 mb-2 pb-2" style={{ borderBottom: '0.5px solid #e2e8f0' }}>
-        <span style={{ color: cs.light, fontWeight: 900, fontSize: 28, lineHeight: 1, color: cs.primary, opacity: 0.2, minWidth: 24, textAlign: 'center' }}>{i+1}</span>
+        <span style={{ fontWeight: 900, fontSize: 28, lineHeight: 1, color: cs.primary, opacity: 0.2, minWidth: 24, textAlign: 'center' }}>{i+1}</span>
         <div className="flex-1">
           <p style={{ color: '#1e293b', fontWeight: 700, fontSize: 10 }}>{ex.name}</p>
           <p style={{ color: '#64748b', fontSize: 8 }}>{ex.sets} sets · {ex.reps} reps · Rest: {ex.rest}</p>
@@ -630,7 +630,7 @@ function PosterPreview({ cs }: { cs: CS }) {
 // ────────────────────────────────────────────────────────────
 // 24. PLAIN
 // ────────────────────────────────────────────────────────────
-function PlainPreview({ cs }: { cs: CS }) {
+function PlainPreview({ cs: _cs }: { cs: CS }) {
   return (<div className="px-5 py-4">
     <p style={{ fontWeight: 700, fontSize: 13, color: '#000', marginBottom: 2 }}>City Physio Clinic</p>
     <p style={{ color: '#64748b', fontSize: 8, marginBottom: 12 }}>clinic@example.com · Rehabilitation Program · January 2026</p>
