@@ -2,7 +2,7 @@ import { Mail, MessageCircle, Stethoscope, Users, HelpCircle } from 'lucide-reac
 
 export default function HelpPage() {
   return (
-    <div className="flex flex-col gap-8 max-w-2xl mx-auto pb-10">
+    <div className="flex flex-col gap-8 pb-10">
 
       {/* Page header */}
       <div>
