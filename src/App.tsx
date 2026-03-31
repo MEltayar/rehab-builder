@@ -13,6 +13,7 @@ import TemplatesPage from './features/templates/pages/TemplatesPage';
 import TemplateEditorPage from './features/templates/pages/TemplateEditorPage';
 import ConfigPage from './features/config/pages/ConfigPage';
 import TemplateLibraryPage from './features/template-library/pages/TemplateLibraryPage';
+import HelpPage from './features/help/pages/HelpPage';
 import { useSettingsStore } from './store/settingsStore';
 import { useTemplateStore } from './store/templateStore';
 
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: 'templates/:id/edit', element: <TemplateEditorPage /> },
       { path: 'config', element: <ConfigPage /> },
       { path: 'template-library', element: <TemplateLibraryPage /> },
+      { path: 'help', element: <HelpPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

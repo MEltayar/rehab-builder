@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Settings,
   Library,
+  HelpCircle,
   X,
 } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -17,6 +18,7 @@ const navSections = [
   { id: 'programs',         label: 'Program Builder',    path: '/programs',        icon: ClipboardList },
   { id: 'template-library', label: 'Template Library',   path: '/template-library',icon: Library },
   { id: 'config',           label: 'Configuration',      path: '/config',          icon: Settings },
+  { id: 'help',             label: 'Help & About',        path: '/help',            icon: HelpCircle },
 ];
 
 interface SidebarProps {
