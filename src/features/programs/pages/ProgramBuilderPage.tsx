@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, BookTemplate } from 'lucide-react';
+import { Plus, BookTemplate, UserPlus } from 'lucide-react';
 import { useToastStore } from '../../../store/toastStore';
 import { useProgramStore } from '../../../store/programStore';
 import { useClientStore } from '../../../store/clientStore';
@@ -52,6 +52,7 @@ export default function ProgramBuilderPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [noClientDismissed, setNoClientDismissed] = useState(false);
 
   useEffect(() => {
     if (!clientsLoaded) initializeClients();
@@ -109,10 +110,12 @@ export default function ProgramBuilderPage() {
     );
   }
 
+  const showNoClientBanner = !id && clientsLoaded && clients.length === 0 && !noClientDismissed;
+
   function validate(): boolean {
     if (!draft) return false;
     const e: Record<string, string> = {};
-    if (!draft.clientId) e.clientId = 'Please select a client.';
+    if (!draft.clientId && clients.length > 0) e.clientId = 'Please select a client.';
     if (!draft.name.trim()) e.name = 'Program name is required.';
     if (!draft.condition.trim()) e.condition = 'Condition is required.';
     if (!draft.goal.trim()) e.goal = 'Goal is required.';
@@ -179,6 +182,35 @@ export default function ProgramBuilderPage() {
           )}
         </div>
       </div>
+
+      {showNoClientBanner && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-start gap-3 flex-1">
+            <UserPlus size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-0.5">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">No clients yet</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Add a client to assign this program, or continue building it and assign a client later.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/clients"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium rounded-md transition-colors"
+            >
+              <UserPlus size={13} />
+              Add Client
+            </Link>
+            <button
+              onClick={() => setNoClientDismissed(true)}
+              className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            >
+              Continue anyway
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
         <ProgramMetaForm
