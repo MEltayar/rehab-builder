@@ -240,6 +240,7 @@ export default function ProgramPreviewPage() {
           option={selectedSendOption}
           clientEmail={client?.email}
           clientPhone={client?.phone}
+          clientId={program.clientId}
           defaultEmailSubject={emailSubject ?? ''}
           defaultEmailBody={emailTemplate ?? ''}
           defaultWhatsAppBody={whatsappTemplate ?? ''}

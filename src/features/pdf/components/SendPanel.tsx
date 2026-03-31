@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, Mail, MessageCircle, X } from 'lucide-react';
 
 interface SendPanelProps {
   option: 'email' | 'whatsapp';
   clientEmail?: string;
   clientPhone?: string;
+  clientId?: string;
   defaultEmailSubject: string;
   defaultEmailBody: string;
   defaultWhatsAppBody: string;
@@ -18,6 +20,7 @@ export default function SendPanel({
   option,
   clientEmail,
   clientPhone,
+  clientId,
   defaultEmailSubject,
   defaultEmailBody,
   defaultWhatsAppBody,
@@ -77,7 +80,15 @@ export default function SendPanel({
             />
             {emailMissing && (
               <p className="text-xs text-red-500 mt-0.5">
-                This client has no email address — add one in their profile.
+                This client has no email address.{' '}
+                {clientId && (
+                  <Link
+                    to={`/clients/${clientId}`}
+                    className="underline hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    Update their profile
+                  </Link>
+                )}
               </p>
             )}
           </div>
@@ -108,7 +119,15 @@ export default function SendPanel({
             />
             {whatsappMissing && (
               <p className="text-xs text-red-500 mt-0.5">
-                This client has no phone number — add one in their profile.
+                This client has no phone number.{' '}
+                {clientId && (
+                  <Link
+                    to={`/clients/${clientId}`}
+                    className="underline hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    Update their profile
+                  </Link>
+                )}
               </p>
             )}
           </div>
