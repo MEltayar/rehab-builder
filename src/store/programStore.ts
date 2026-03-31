@@ -87,7 +87,7 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
         clientId: '',
         name: template.name,
         condition: template.condition,
-        goal: '',
+        goal: 'Reduce pain and restore normal movement.',
         durationWeeks: 4,
         startDate: new Date().toISOString().split('T')[0],
         sessions: JSON.parse(JSON.stringify(template.sessions)),
