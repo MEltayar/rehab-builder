@@ -1160,7 +1160,7 @@ export default function ProgramPDF({
                       const isLast = ei === session.exercises.length - 2;
                       const isOdd = (ei + 1) % 2 !== 0;
                       return (
-                        <View key={pe.id} style={[S.tableRow, isOdd ? S.tableRowOdd : S.tableRowEven, isLast ? S.tableRowLast : {}]}>
+                        <View key={pe.id} style={[S.tableRow, isOdd ? S.tableRowOdd : S.tableRowEven, isLast ? S.tableRowLast : {}]} wrap={false}>
                           <View style={S.tdExercise}>
                             <Text>{exEntry?.name ?? 'Unknown exercise'}</Text>
                             {exEntry?.videoUrl && <Link src={exEntry.videoUrl} style={{ fontSize: 7, color: C.primary, marginTop: 1 }}>Watch video ▶</Link>}
@@ -1246,7 +1246,7 @@ export default function ProgramPDF({
                       const exEntry = exerciseMap.get(pe.exerciseId);
                       const isEven = ei % 2 === 0;
                       return (
-                        <View key={pe.id} style={[S.patExCard, isEven ? S.patExCardEven : S.patExCardOdd]}>
+                        <View key={pe.id} style={[S.patExCard, isEven ? S.patExCardEven : S.patExCardOdd]} wrap={false}>
                           <Text style={S.patExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                           <Text style={S.patExMetrics}>{metricStr(pe) || '—'}</Text>
                           {pe.notes ? <Text style={S.patExNotes}>{pe.notes}</Text> : null}
@@ -1317,7 +1317,7 @@ export default function ProgramPDF({
                         pe.restSeconds != null ? `rest ${pe.restSeconds}s` : null,
                       ].filter(Boolean).join(' · ');
                       return (
-                        <View key={pe.id} style={S.chkRow}>
+                        <View key={pe.id} style={S.chkRow} wrap={false}>
                           <View style={S.chkBox} />
                           <View style={{ flex: 1 }}>
                             <Text style={S.chkExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
@@ -1385,7 +1385,7 @@ export default function ProgramPDF({
                       const exEntry = exerciseMap.get(pe.exerciseId);
                       const detail = metricStr(pe);
                       return (
-                        <View key={pe.id} style={S.clinRow}>
+                        <View key={pe.id} style={S.clinRow} wrap={false}>
                           <View style={S.clinExLine}>
                             <Text style={S.clinExNum}>{ei + 1}.</Text>
                             <Text style={S.clinExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
@@ -1460,7 +1460,7 @@ export default function ProgramPDF({
                       {session.exercises.map((pe) => {
                         const exEntry = exerciseMap.get(pe.exerciseId);
                         return (
-                          <View key={pe.id} style={S.minRow}>
+                          <View key={pe.id} style={S.minRow} wrap={false}>
                             <View style={S.minTd}><Text>{exEntry?.name ?? 'Unknown exercise'}</Text></View>
                             <Text style={S.minTdSmall}>{dash(pe.sets)}</Text>
                             <Text style={S.minTdSmall}>{dash(pe.reps)}</Text>
@@ -1634,7 +1634,7 @@ export default function ProgramPDF({
                     const isOdd = (ei + 1) % 2 !== 0;
                     const isLast = ei === session.exercises.length - 2;
                     return (
-                      <View key={pe.id} style={[S.tableRow, isOdd ? S.tableRowOdd : S.tableRowEven, isLast ? S.tableRowLast : {}]}>
+                      <View key={pe.id} style={[S.tableRow, isOdd ? S.tableRowOdd : S.tableRowEven, isLast ? S.tableRowLast : {}]} wrap={false}>
                         <Text style={S.tdExercise}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                         <Text style={S.tdSmall}>{dash(pe.sets)}</Text>
                         <Text style={S.tdSmall}>{dash(pe.reps)}</Text>
@@ -1718,7 +1718,7 @@ export default function ProgramPDF({
                     const exEntry = exerciseMap.get(pe.exerciseId);
                     const isOdd = (ei + 1) % 2 !== 0;
                     return (
-                      <View key={pe.id} style={[S.compRow, isOdd ? { backgroundColor: C.gray50 } : { backgroundColor: C.white }]}>
+                      <View key={pe.id} style={[S.compRow, isOdd ? { backgroundColor: C.gray50 } : { backgroundColor: C.white }]} wrap={false}>
                         <Text style={S.compTdEx}>{exEntry?.name ?? 'Unknown'}</Text>
                         <Text style={S.compTdSm}>{dash(pe.sets)}</Text>
                         <Text style={S.compTdSm}>{dash(pe.reps)}</Text>
@@ -2220,7 +2220,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe, ei) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={[S.strRow, ei % 2 === 0 ? S.strRowEven : S.strRowOdd]}>
+                    <View key={pe.id} style={[S.strRow, ei % 2 === 0 ? S.strRowEven : S.strRowOdd]} wrap={false}>
                       <Text style={S.strNum}>{ei + 1}</Text>
                       <Text style={S.strName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       <Text style={S.strMetric}>{metricStr(pe) || '—'}</Text>
@@ -2278,7 +2278,7 @@ export default function ProgramPDF({
                       {pair.map((pe) => {
                         const exEntry = exerciseMap.get(pe.exerciseId);
                         return (
-                          <View key={pe.id} style={S.magCard}>
+                          <View key={pe.id} style={S.magCard} wrap={false}>
                             <View style={S.magCardAccent} />
                             <View style={S.magCardBody}>
                               <Text style={S.magCardName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
@@ -2342,7 +2342,7 @@ export default function ProgramPDF({
                   if (pe.holdTime != null) parts.push(`hold ${pe.holdTime}s`);
                   if (pe.restSeconds != null) parts.push(`rest ${pe.restSeconds}s`);
                   return (
-                    <View key={pe.id} style={S.sbarExRow}>
+                    <View key={pe.id} style={S.sbarExRow} wrap={false}>
                       <View style={S.sbarExMain}>
                         <Text style={S.sbarExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                         {pe.notes ? <Text style={S.sbarExNotes}>{pe.notes}</Text> : null}
@@ -2402,7 +2402,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe, ei) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.acadExRow}>
+                    <View key={pe.id} style={S.acadExRow} wrap={false}>
                       <View style={S.acadExLine}>
                         <Text style={S.acadExNum}>{si + 1}.{ei + 1}</Text>
                         <Text style={S.acadExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
@@ -2455,7 +2455,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id}>
+                    <View key={pe.id} wrap={false}>
                       <View style={S.outlExRow}>
                         <View style={S.outlBullet} />
                         <Text style={S.outlExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
@@ -2504,7 +2504,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.rcptExRow}>
+                    <View key={pe.id} style={S.rcptExRow} wrap={false}>
                       <Text style={S.rcptExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       <View style={S.rcptDotLeader} />
                       <Text style={S.rcptExMetric}>{metricStr(pe) || '—'}</Text>
@@ -2556,7 +2556,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.nbRuledRow}>
+                    <View key={pe.id} style={S.nbRuledRow} wrap={false}>
                       <Text style={S.nbExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       {metricStr(pe) && <Text style={S.nbExDetail}>{metricStr(pe)}</Text>}
                       {pe.notes ? <Text style={S.nbExNotes}>{pe.notes}</Text> : null}
@@ -2602,7 +2602,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.postExRow}>
+                    <View key={pe.id} style={S.postExRow} wrap={false}>
                       <Text style={S.postExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       {metricStr(pe) && <Text style={S.postExMetric}>{metricStr(pe)}</Text>}
                       {pe.notes ? <Text style={S.postExNotes}>{pe.notes}</Text> : null}
@@ -2645,7 +2645,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe, ei) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.plnExRow}>
+                    <View key={pe.id} style={S.plnExRow} wrap={false}>
                       <Text style={S.plnExName}>{ei + 1}. {exEntry?.name ?? 'Unknown exercise'}</Text>
                       {metricStr(pe) && <Text style={S.plnExDetail}>{metricStr(pe)}</Text>}
                       {pe.notes ? <Text style={S.plnExNotes}>{pe.notes}</Text> : null}
@@ -2703,7 +2703,7 @@ export default function ProgramPDF({
                   if (pe.holdTime != null) pills.push(`hold ${pe.holdTime}s`);
                   if (pe.restSeconds != null) pills.push(`rest ${pe.restSeconds}s`);
                   return (
-                    <View key={pe.id} style={S.rndExCard}>
+                    <View key={pe.id} style={S.rndExCard} wrap={false}>
                       <View style={S.rndExCardTop}>
                         <Text style={S.rndExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       </View>
@@ -2765,7 +2765,7 @@ export default function ProgramPDF({
                 ) : session.exercises.map((pe) => {
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   return (
-                    <View key={pe.id} style={S.hlgtExRow}>
+                    <View key={pe.id} style={S.hlgtExRow} wrap={false}>
                       <View style={S.hlgtHlBox}>
                         <Text style={S.hlgtExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                         {metricStr(pe) ? (
@@ -2829,7 +2829,7 @@ export default function ProgramPDF({
                       {triplet.map((pe) => {
                         const exEntry = exerciseMap.get(pe.exerciseId);
                         return (
-                          <View key={pe.id} style={S.colsCard}>
+                          <View key={pe.id} style={S.colsCard} wrap={false}>
                             <View style={S.colsCardHead}>
                               <Text style={S.colsCardName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                             </View>
@@ -2896,7 +2896,7 @@ export default function ProgramPDF({
                   const exEntry = exerciseMap.get(pe.exerciseId);
                   const isLast = ei === session.exercises.length - 1;
                   return (
-                    <View key={pe.id} style={S.divExRow}>
+                    <View key={pe.id} style={S.divExRow} wrap={false}>
                       <Text style={S.divExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                       {metricStr(pe) && <Text style={S.divExDetail}>{metricStr(pe)}</Text>}
                       {pe.notes ? <Text style={S.divExNotes}>{pe.notes}</Text> : null}
@@ -2960,7 +2960,7 @@ export default function ProgramPDF({
                     {session.exercises.map((pe, ei) => {
                       const exEntry = exerciseMap.get(pe.exerciseId);
                       return (
-                        <View key={pe.id} style={[S.schedRow, ei % 2 === 0 ? S.schedRowEven : S.schedRowOdd]}>
+                        <View key={pe.id} style={[S.schedRow, ei % 2 === 0 ? S.schedRowEven : S.schedRowOdd]} wrap={false}>
                           <Text style={S.schedTdNum}>{ei + 1}</Text>
                           <Text style={S.schedTdName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                           <Text style={S.schedTdSpec}>{metricStr(pe) || '—'}</Text>
@@ -3016,7 +3016,7 @@ export default function ProgramPDF({
                     {session.exercises.map((pe) => {
                       const exEntry = exerciseMap.get(pe.exerciseId);
                       return (
-                        <View key={pe.id} style={S.ccCard}>
+                        <View key={pe.id} style={S.ccCard} wrap={false}>
                           <View style={S.ccCardHead}>
                             <Text style={S.ccCardName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                           </View>
@@ -3102,7 +3102,7 @@ export default function ProgramPDF({
                     const exEntry = exerciseMap.get(pe.exerciseId);
                     const isOdd = ei % 2 !== 0;
                     return (
-                      <View key={pe.id} style={S.modExRow}>
+                      <View key={pe.id} style={S.modExRow} wrap={false}>
                         <View style={isOdd ? S.modExMainOdd : S.modExMain}>
                           <Text style={S.modExName}>{exEntry?.name ?? 'Unknown exercise'}</Text>
                           {pe.notes ? <Text style={S.modExNotes}>{pe.notes}</Text> : null}
