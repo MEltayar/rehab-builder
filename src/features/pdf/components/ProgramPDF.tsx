@@ -38,6 +38,7 @@ function buildStyles(C: ReturnType<typeof buildPalette>) {
       fontFamily: 'Helvetica',
       fontSize: 9,
       backgroundColor: C.white,
+      paddingTop: 28,
       paddingBottom: 48,
     },
 
