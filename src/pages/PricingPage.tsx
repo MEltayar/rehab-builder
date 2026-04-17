@@ -260,7 +260,7 @@ export default function PricingPage() {
             <li className="flex items-start gap-3">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 mt-0.5"
                 style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)' }}>2</span>
-              Send payment via <strong className="text-white/80 mx-1">InstaPay</strong> or <strong className="text-white/80 mx-1">Vodafone Cash</strong> to <strong className="text-white/80 ml-1">{CONTACT_NUMBER}</strong>
+              <span>Send payment via <strong className="text-white/80">InstaPay</strong> or <strong className="text-white/80">Vodafone Cash</strong> to <strong className="text-white/80 block mt-0.5">{CONTACT_NUMBER}</strong></span>
             </li>
             <li className="flex items-start gap-3">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 mt-0.5"
