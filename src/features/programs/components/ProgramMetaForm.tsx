@@ -1,4 +1,5 @@
 import type { Client, Program } from '../../../types';
+import { useProfileTerms } from '../../../hooks/useProfileTerms';
 
 interface ProgramMetaFormProps {
   draft: Program;
@@ -14,6 +15,7 @@ const labelClass = 'text-sm font-medium text-gray-700 dark:text-gray-300';
 
 export default function ProgramMetaForm({ draft, clients, errors, onChange }: ProgramMetaFormProps) {
   const sortedClients = [...clients].sort((a, b) => a.name.localeCompare(b.name));
+  const terms = useProfileTerms();
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,29 +44,27 @@ export default function ProgramMetaForm({ draft, clients, errors, onChange }: Pr
 
       {/* Name */}
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>
-          Program Name <span className="text-red-500">*</span>
-        </label>
+        <label className={labelClass}>Program Name</label>
         <input
           type="text"
           value={draft.name}
           onChange={(e) => onChange('name', e.target.value)}
-          placeholder="e.g. ACL Recovery Phase 1"
+          placeholder={terms.programNamePlaceholder}
           className={inputClass}
         />
         {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
       </div>
 
-      {/* Condition */}
+      {/* Condition / Focus Area */}
       <div className="flex flex-col gap-1">
         <label className={labelClass}>
-          Condition <span className="text-red-500">*</span>
+          {terms.conditionLabel}
         </label>
         <input
           type="text"
           value={draft.condition}
           onChange={(e) => onChange('condition', e.target.value)}
-          placeholder="e.g. ACL Tear"
+          placeholder={terms.conditionPlaceholder}
           className={inputClass}
         />
         {errors.condition && <p className="text-xs text-red-500">{errors.condition}</p>}
@@ -73,13 +73,13 @@ export default function ProgramMetaForm({ draft, clients, errors, onChange }: Pr
       {/* Goal */}
       <div className="flex flex-col gap-1">
         <label className={labelClass}>
-          Goal <span className="text-red-500">*</span>
+          Goal
         </label>
         <input
           type="text"
           value={draft.goal}
           onChange={(e) => onChange('goal', e.target.value)}
-          placeholder="e.g. Return to sport"
+          placeholder={terms.goalPlaceholder}
           className={inputClass}
         />
         {errors.goal && <p className="text-xs text-red-500">{errors.goal}</p>}
@@ -111,6 +111,8 @@ export default function ProgramMetaForm({ draft, clients, errors, onChange }: Pr
           <input
             type="date"
             value={draft.startDate}
+            min="2000-01-01"
+            max="2099-12-31"
             onChange={(e) => onChange('startDate', e.target.value)}
             className={inputClass}
           />

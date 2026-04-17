@@ -2,11 +2,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 import { GripVertical, Trash2 } from 'lucide-react';
 import type { ProgramExercise } from '../../../types';
+import { useSettingsStore } from '../../../store/settingsStore';
 
 interface ExerciseParamRowProps {
   programExercise: ProgramExercise;
   exerciseName: string;
-  onUpdateParams: (params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'restSeconds' | 'notes'>>) => void;
+  onUpdateParams: (params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'weightKg' | 'restSeconds' | 'notes'>>) => void;
   onRemove: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function ExerciseParamRow({
   onUpdateParams,
   onRemove,
 }: ExerciseParamRowProps) {
+  const isGym = useSettingsStore((s) => s.profileType) === 'gym';
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: programExercise.id,
   });
@@ -68,6 +70,7 @@ export default function ExerciseParamRow({
               onUpdateParams({ sets: e.target.value ? Number(e.target.value) : undefined })
             }
             min={1}
+            max={100}
             step={1}
             placeholder="—"
             className={numInputClass}
@@ -87,20 +90,39 @@ export default function ExerciseParamRow({
           />
         </label>
 
-        <label className="flex flex-col gap-0.5">
-          <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Hold (s)</span>
-          <input
-            type="number"
-            value={programExercise.holdTime ?? ''}
-            onChange={(e) =>
-              onUpdateParams({ holdTime: e.target.value ? Number(e.target.value) : undefined })
-            }
-            min={0}
-            step={1}
-            placeholder="—"
-            className={numInputClass}
-          />
-        </label>
+        {isGym ? (
+          <label className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Weight (kg)</span>
+            <input
+              type="number"
+              value={programExercise.weightKg ?? ''}
+              onChange={(e) =>
+                onUpdateParams({ weightKg: e.target.value ? Number(e.target.value) : undefined })
+              }
+              min={0}
+              max={500}
+              step={0.5}
+              placeholder="—"
+              className={numInputClass}
+            />
+          </label>
+        ) : (
+          <label className="flex flex-col gap-0.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Hold (s)</span>
+            <input
+              type="number"
+              value={programExercise.holdTime ?? ''}
+              onChange={(e) =>
+                onUpdateParams({ holdTime: e.target.value ? Number(e.target.value) : undefined })
+              }
+              min={0}
+              max={300}
+              step={1}
+              placeholder="—"
+              className={numInputClass}
+            />
+          </label>
+        )}
 
         <label className="flex flex-col gap-0.5">
           <span className="text-xs text-gray-500 dark:text-gray-400 text-center">Rest (s)</span>
@@ -111,6 +133,7 @@ export default function ExerciseParamRow({
               onUpdateParams({ restSeconds: e.target.value ? Number(e.target.value) : undefined })
             }
             min={0}
+            max={600}
             step={1}
             placeholder="—"
             className={numInputClass}

@@ -203,8 +203,8 @@ export default function ExportedSheetTemplateSection({
                       onClick={() => onSelectTemplate(template.id)}
                       className={`flex-1 px-1.5 py-1 text-xs rounded font-medium transition-colors ${
                         isSelected
-                          ? 'bg-blue-600 text-white cursor-default'
-                          : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                          ? 'bg-orange-500 text-white cursor-default'
+                          : 'bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/50'
                       }`}
                       style={{ fontSize: 10 }}
                     >

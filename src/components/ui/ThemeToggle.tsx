@@ -7,7 +7,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={() => setDarkMode(!darkMode)}
-      className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+      className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-white/65 hover:bg-white/10 hover:text-white transition-all"
       aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {darkMode ? <Sun size={16} /> : <Moon size={16} />}

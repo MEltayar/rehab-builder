@@ -41,11 +41,11 @@ export default function SendPanel({
   const inputCls =
     'w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 ' +
     'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm ' +
-    'focus:outline-none focus:ring-2 focus:ring-blue-500';
+    'focus:outline-none focus:ring-2 focus:ring-orange-500';
 
   const primaryBtnCls = (disabled: boolean) =>
     `flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors shadow-sm ` +
-    (disabled ? 'bg-blue-400 cursor-not-allowed opacity-60' : 'bg-blue-600 hover:bg-blue-700');
+    (disabled ? 'bg-orange-300 cursor-not-allowed opacity-60' : 'bg-orange-500 hover:bg-orange-600');
 
   const spinnerEl = <Loader2 size={14} className="animate-spin" />;
 

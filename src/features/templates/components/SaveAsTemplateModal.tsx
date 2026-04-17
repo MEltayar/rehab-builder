@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTemplateStore } from '../../../store/templateStore';
+import { useToastStore } from '../../../store/toastStore';
 import type { Session } from '../../../types';
 
 interface SaveAsTemplateModalProps {
@@ -20,6 +21,7 @@ export default function SaveAsTemplateModal({
 }: SaveAsTemplateModalProps) {
   const addTemplate = useTemplateStore((s) => s.addTemplate);
   const templates = useTemplateStore((s) => s.templates);
+  const showToast = useToastStore((s) => s.showToast);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -74,6 +76,9 @@ export default function SaveAsTemplateModal({
         createdAt: new Date().toISOString(),
       });
       onClose();
+    } catch (err) {
+      console.error('Failed to save template:', err);
+      showToast('Failed to save template. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
@@ -111,7 +116,7 @@ export default function SaveAsTemplateModal({
               value={name}
               onChange={(e) => { setName(e.target.value); setNameError(''); }}
               placeholder="e.g. ACL Recovery Phase 1"
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {nameError && (
               <p className="text-xs text-red-600 dark:text-red-400">{nameError}</p>
@@ -128,7 +133,7 @@ export default function SaveAsTemplateModal({
               value={condition}
               onChange={(e) => setCondition(e.target.value)}
               placeholder="e.g. ACL reconstruction"
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -142,7 +147,7 @@ export default function SaveAsTemplateModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of this template's purpose…"
               rows={3}
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
             />
           </div>
 
@@ -166,7 +171,7 @@ export default function SaveAsTemplateModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md transition-colors"
+            className="px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-md transition-colors"
           >
             {saving ? 'Saving…' : 'Save Template'}
           </button>

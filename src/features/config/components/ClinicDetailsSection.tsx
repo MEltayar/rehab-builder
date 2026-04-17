@@ -1,12 +1,10 @@
 import { useRef } from 'react';
 import { Camera, Globe, Mail, MessageCircle } from 'lucide-react';
 import SectionHeader from './SectionHeader';
+import type { ProfileType } from '../../../types';
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
-
-const INFO_TEXT =
-  "Your clinic's name, logo, and contact details appear on every exported rehab sheet and PDF sent to clients.";
 
 interface ClinicDetailsValues {
   clinicName: string;
@@ -22,6 +20,7 @@ interface ClinicDetailsSectionProps {
   onChange: (patch: Partial<ClinicDetailsValues>) => void;
   logoError: string;
   onLogoError: (err: string) => void;
+  profileType?: ProfileType;
 }
 
 const inputCls =
@@ -37,8 +36,34 @@ export default function ClinicDetailsSection({
   onChange,
   logoError,
   onLogoError,
+  profileType = 'physio',
 }: ClinicDetailsSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isGym = profileType === 'gym';
+
+  const labels = isGym
+    ? {
+        section: 'Gym Details',
+        infoText: "Your gym's name, logo, and contact details appear on every exported training plan and PDF sent to clients.",
+        name: 'Gym Name',
+        namePlaceholder: 'e.g. FitLife Gym',
+        logo: 'Gym Logo',
+        whatsappPlaceholder: '+1 555 123 4567',
+        gmailPlaceholder: 'gym@gmail.com',
+        instagramPlaceholder: 'https://instagram.com/yourgym',
+        facebookPlaceholder: 'https://facebook.com/yourgym',
+      }
+    : {
+        section: 'Clinic Details',
+        infoText: "Your clinic's name, logo, and contact details appear on every exported rehab sheet and PDF sent to clients.",
+        name: 'Clinic Name',
+        namePlaceholder: 'e.g. City Physio Clinic',
+        logo: 'Clinic Logo',
+        whatsappPlaceholder: '+1 555 123 4567',
+        gmailPlaceholder: 'clinic@gmail.com',
+        instagramPlaceholder: 'https://instagram.com/yourclinic',
+        facebookPlaceholder: 'https://facebook.com/yourclinic',
+      };
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -65,24 +90,24 @@ export default function ClinicDetailsSection({
 
   return (
     <section className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <SectionHeader title="Clinic Details" infoText={INFO_TEXT} />
+      <SectionHeader title={labels.section} infoText={labels.infoText} />
       <div className="flex flex-col gap-4">
 
-        {/* Clinic Name */}
+        {/* Name */}
         <div>
-          <label className={labelCls}>Clinic Name</label>
+          <label className={labelCls}>{labels.name}</label>
           <input
             type="text"
             value={values.clinicName}
             onChange={(e) => onChange({ clinicName: e.target.value })}
-            placeholder="e.g. City Physio Clinic"
+            placeholder={labels.namePlaceholder}
             className={inputCls}
           />
         </div>
 
         {/* Logo */}
         <div>
-          <label className={labelCls}>Clinic Logo</label>
+          <label className={labelCls}>{labels.logo}</label>
           {values.clinicLogo && (
             <img
               src={values.clinicLogo}
@@ -119,7 +144,7 @@ export default function ClinicDetailsSection({
             type="text"
             value={values.clinicWhatsApp ?? ''}
             onChange={(e) => onChange({ clinicWhatsApp: e.target.value })}
-            placeholder="+1 555 123 4567"
+            placeholder={labels.whatsappPlaceholder}
             className={inputCls}
           />
         </div>
@@ -134,7 +159,7 @@ export default function ClinicDetailsSection({
             type="text"
             value={values.clinicGmail ?? ''}
             onChange={(e) => onChange({ clinicGmail: e.target.value })}
-            placeholder="clinic@gmail.com"
+            placeholder={labels.gmailPlaceholder}
             className={inputCls}
           />
         </div>
@@ -149,7 +174,7 @@ export default function ClinicDetailsSection({
             type="text"
             value={values.clinicInstagram ?? ''}
             onChange={(e) => onChange({ clinicInstagram: e.target.value })}
-            placeholder="https://instagram.com/yourclinic"
+            placeholder={labels.instagramPlaceholder}
             className={inputCls}
           />
         </div>
@@ -164,7 +189,7 @@ export default function ClinicDetailsSection({
             type="text"
             value={values.clinicFacebook ?? ''}
             onChange={(e) => onChange({ clinicFacebook: e.target.value })}
-            placeholder="https://facebook.com/yourclinic"
+            placeholder={labels.facebookPlaceholder}
             className={inputCls}
           />
         </div>

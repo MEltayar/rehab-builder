@@ -1,1 +1,1 @@
-export { db } from './schema';
+export { supabase } from '../lib/supabase';

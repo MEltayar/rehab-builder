@@ -80,7 +80,7 @@ export default function VideoPreviewModal({ exercise, onClose }: Props) {
                 href={exercise.videoUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
               >
                 <ExternalLink size={14} />
                 Open link in new tab

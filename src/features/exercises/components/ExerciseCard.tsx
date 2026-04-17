@@ -1,15 +1,34 @@
 import { useState } from 'react';
 import { ExternalLink, Pencil, Trash2, Video } from 'lucide-react';
 import type { Exercise, ExerciseCategory } from '../../../types';
+import { useSettingsStore } from '../../../store/settingsStore';
 import { getYouTubeThumbnailUrl } from '../services/youtubeUtils';
 
 const CATEGORY_COLORS: Record<ExerciseCategory, string> = {
+  // Physio
   mobility: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
   stability: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
   strength: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
   stretching: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300',
   balance: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
   functional: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300',
+  // Gym
+  chest: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  back: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
+  shoulders: 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300',
+  biceps: 'bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300',
+  triceps: 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
+  legs: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
+  glutes: 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300',
+  core: 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300',
+  cardio: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300',
+  full_body: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+};
+
+const EQUIPMENT_LABELS: Record<string, string> = {
+  barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable',
+  machine: 'Machine', bodyweight: 'Bodyweight', kettlebell: 'Kettlebell',
+  resistance_band: 'Band', ez_bar: 'EZ Bar', other: 'Other',
 };
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -26,6 +45,7 @@ interface ExerciseCardProps {
 }
 
 export default function ExerciseCard({ exercise, onEdit, onDelete, onPreview }: ExerciseCardProps) {
+  const isGym = useSettingsStore((s) => s.profileType) === 'gym';
   const visibleTags = exercise.tags.slice(0, 3);
   const thumbnailUrl = exercise.videoUrl ? getYouTubeThumbnailUrl(exercise.videoUrl) : null;
   const [thumbError, setThumbError] = useState(false);
@@ -62,15 +82,23 @@ export default function ExerciseCard({ exercise, onEdit, onDelete, onPreview }: 
         </div>
 
         <div className="flex flex-wrap gap-1">
-          <span className={`text-xs px-2 py-0.5 rounded font-medium ${CATEGORY_COLORS[exercise.category]}`}>
-            {exercise.category.charAt(0).toUpperCase() + exercise.category.slice(1)}
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${CATEGORY_COLORS[exercise.category] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
+            {exercise.category.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
           </span>
+          {isGym && exercise.equipment && (
+            <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+              {EQUIPMENT_LABELS[exercise.equipment] ?? exercise.equipment}
+            </span>
+          )}
           {exercise.progressionLevel && (
             <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium">
               {LEVEL_LABELS[exercise.progressionLevel]}
             </span>
           )}
         </div>
+        {isGym && exercise.muscleGroup && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">{exercise.muscleGroup}</p>
+        )}
 
         {visibleTags.length > 0 && (
           <div className="flex flex-wrap gap-1">

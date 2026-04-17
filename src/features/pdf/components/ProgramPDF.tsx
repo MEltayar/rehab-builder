@@ -1067,7 +1067,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
 
@@ -1203,7 +1203,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
 
@@ -1280,7 +1280,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
 
@@ -1351,7 +1351,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
 
@@ -1422,7 +1422,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.minClinicHero}>
@@ -1496,7 +1496,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.boldClinicHero}>
@@ -1571,7 +1571,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.execClinicHero}>
@@ -1667,7 +1667,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.compClinicHero}>
@@ -1752,7 +1752,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.tcolClinicHero}>
@@ -1827,7 +1827,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.ledClinicHero}>
@@ -1904,7 +1904,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.tlClinicHero}>
@@ -1975,7 +1975,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.hoClinicHero}>
@@ -2042,7 +2042,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.rpClinicHero}>
@@ -2110,7 +2110,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.cardClinicHero}>
@@ -2194,7 +2194,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.strClinicHero}>
@@ -2251,7 +2251,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.magClinicHero}>
@@ -2315,7 +2315,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.sbarClinicHero}>
@@ -2377,7 +2377,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.acadClinicHero}>
@@ -2435,7 +2435,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.outlClinicHero}>
@@ -2481,7 +2481,7 @@ export default function ProgramPDF({
       <Document>
         <Page size="A4" style={S.page}>
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.rcptClinicHero}>
@@ -2534,7 +2534,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.nbClinicHero}>
@@ -2579,7 +2579,7 @@ export default function ProgramPDF({
       <Document>
         <Page size="A4" style={S.page}>
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.postClinicHero}>
@@ -2625,7 +2625,7 @@ export default function ProgramPDF({
       <Document>
         <Page size="A4" style={S.page}>
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.plnClinicHero}>
@@ -2675,7 +2675,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.rndClinicHero}>
@@ -2743,7 +2743,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.hlgtClinicHero}>
@@ -2801,7 +2801,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.colsClinicHero}>
@@ -2869,7 +2869,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.divClinicHero}>
@@ -2927,7 +2927,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.schedClinicHero}>
@@ -2992,7 +2992,7 @@ export default function ProgramPDF({
             </View>
           )}
           <View fixed style={S.footer}>
-            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+            <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
             <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
           <View style={S.ccClinicHero}>
@@ -3052,7 +3052,7 @@ export default function ProgramPDF({
           </View>
         )}
         <View fixed style={S.footer}>
-          <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Rehab Builder'} · Generated {exportDate}</Text>
+          <Text style={S.footerText}>{hasClinic ? clinic.clinicName : 'Full Range Lab'} · Generated {exportDate}</Text>
           <Text style={S.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
 

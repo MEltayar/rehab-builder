@@ -3,12 +3,22 @@ import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ToastContainer from '../ui/ToastContainer';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import TrialBanner from '../TrialBanner';
+import TrialExpiredWall from '../TrialExpiredWall';
+import { usePlanStore } from '../../store/planStore';
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isTrialExpired = usePlanStore((s) => s.isTrialExpired());
+  const isPlanLoaded = usePlanStore((s) => s.isLoaded);
+
+  if (isPlanLoaded && isTrialExpired) {
+    return <TrialExpiredWall />;
+  }
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
       {/* Mobile backdrop */}
       {sidebarOpen && (
@@ -22,7 +32,7 @@ export default function AppLayout() {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+        <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 -ml-1 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -30,15 +40,24 @@ export default function AppLayout() {
           >
             <Menu size={22} />
           </button>
-          <span className="text-base font-bold text-gray-900 dark:text-gray-100">Rehab Builder</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)' }}>
+              <span className="text-[9px] font-black text-white tracking-tight">FRL</span>
+            </div>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Full Range Lab</span>
+          </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          <Outlet />
+        <TrialBanner />
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 p-4 md:p-6">
+          <div className="max-w-6xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
 
       <ToastContainer />
+      <ConfirmDialog />
     </div>
   );
 }

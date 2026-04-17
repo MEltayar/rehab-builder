@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import type { Exercise, ExerciseCategory } from '../types';
-import { db } from '../db';
-import { seedIfEmpty, getAllExercises } from '../features/exercises/services/exerciseService';
+import { supabase } from '../lib/supabase';
+import { exerciseToDbRow, exercisePatchToDbRow } from '../lib/mappers';
+import { useUserStore } from './userStore';
+import { seedIfEmpty, seedGymExercisesIfMissing, syncGymExerciseVideos, getAllExercises } from '../features/exercises/services/exerciseService';
 
 interface ExerciseStore {
   exercises: Exercise[];
   isLoaded: boolean;
+  isInitializing: boolean;
   searchTerm: string;
   selectedCategory: ExerciseCategory | 'all';
   selectedTag: string | null;
@@ -26,29 +29,44 @@ interface ExerciseStore {
 export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   exercises: [],
   isLoaded: false,
+  isInitializing: false,
   searchTerm: '',
   selectedCategory: 'all',
   selectedTag: null,
 
   initializeFromDB: async () => {
+    if (get().isLoaded || get().isInitializing) return;
+    set({ isInitializing: true });
     await seedIfEmpty();
+    await seedGymExercisesIfMissing();
+    await syncGymExerciseVideos();
     const all = await getAllExercises();
-    set({ exercises: all, isLoaded: true });
+    set({ exercises: all, isLoaded: true, isInitializing: false });
   },
 
   addExercise: async (data) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isAdmin = useUserStore.getState().canAccessAdmin();
+    // Admin/staff exercises are treated as built-in (visible to all users).
+    // Regular user exercises are personal custom (visible only to them).
     const exercise: Exercise = {
       ...data,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      isCustom: true,
+      isCustom: !isAdmin,
+      userId: user?.id,
     };
-    await db.exercises.add(exercise);
+    const { error } = await supabase.from('exercises').insert(exerciseToDbRow(exercise));
+    if (error) throw error;
     set((state) => ({ exercises: [...state.exercises, exercise] }));
   },
 
   updateExercise: async (id, data) => {
-    await db.exercises.update(id, data);
+    const { error } = await supabase
+      .from('exercises')
+      .update(exercisePatchToDbRow(data))
+      .eq('id', id);
+    if (error) throw error;
     set((state) => ({
       exercises: state.exercises.map((ex) =>
         ex.id === id ? { ...ex, ...data } : ex
@@ -57,7 +75,8 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   },
 
   deleteExercise: async (id) => {
-    await db.exercises.delete(id);
+    const { error } = await supabase.from('exercises').delete().eq('id', id);
+    if (error) throw error;
     set((state) => ({
       exercises: state.exercises.filter((ex) => ex.id !== id),
     }));
@@ -82,3 +101,4 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     return [...new Set(tags)].sort();
   },
 }));
+

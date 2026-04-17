@@ -8,7 +8,7 @@ interface SortableExerciseListProps {
   exercises: ProgramExercise[];
   onUpdateParams: (
     programExerciseId: string,
-    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'restSeconds' | 'notes'>>
+    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'weightKg' | 'restSeconds' | 'notes'>>
   ) => void;
   onRemove: (programExerciseId: string) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;

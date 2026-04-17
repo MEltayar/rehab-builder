@@ -5,19 +5,22 @@ import {
   ClipboardList,
   Dumbbell,
   Library,
-  Plus,
-  Settings,
   ChevronRight,
-  CalendarDays,
   AlertCircle,
-  FileText,
   UserPlus,
+  TrendingUp,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  PauseCircle,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useClientStore } from '../../../store/clientStore';
 import { useProgramStore } from '../../../store/programStore';
 import { useExerciseStore } from '../../../store/exerciseStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useTemplateStore } from '../../../store/templateStore';
+import GymFloatAnimation from '../../../components/GymFloatAnimation';
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -34,37 +37,58 @@ function timeAgo(iso: string): string {
   const days = Math.floor(diff / 86_400_000);
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
+  if (days < 7) return `${days}d ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
   return fmtDate(iso);
 }
 
-// ── Sub-components ────────────────────────────────────────
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+// ── Stat card ────────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
-  value: number;
+  value: number | string;
+  sub?: string;
   icon: React.ElementType;
-  color: string;       // Tailwind bg class for icon bg
-  textColor: string;   // Tailwind text class for icon
+  gradient: string;
   to: string;
 }
 
-function StatCard({ label, value, icon: Icon, color, textColor, to }: StatCardProps) {
+function StatCard({ label, value, sub, icon: Icon, gradient, to }: StatCardProps) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow"
+      className={`relative flex flex-col justify-between rounded-2xl p-5 overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition-transform shadow-md min-h-[110px] ${gradient}`}
     >
-      <div className={`p-3 rounded-xl ${color}`}>
-        <Icon size={22} className={textColor} />
+      <div className="absolute -right-5 -bottom-5 w-24 h-24 rounded-full bg-white/10 blur-xl pointer-events-none" />
+      <div className="flex items-start justify-between">
+        <div className="p-2 rounded-xl bg-white/20 shadow-sm">
+          <Icon size={18} className="text-white" />
+        </div>
+        <ChevronRight size={14} className="text-white/50 mt-1" />
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+      <div className="mt-3">
+        <p className="text-3xl font-extrabold text-white leading-none">{value}</p>
+        <p className="text-xs text-white/75 font-medium mt-1">{label}</p>
+        {sub && <p className="text-xs text-white/50 mt-0.5">{sub}</p>}
       </div>
     </Link>
   );
+}
+
+// ── Status badge ─────────────────────────────────────────
+
+function StatusBadge({ status }: { status?: string }) {
+  if (status === 'active')    return <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Active</span>;
+  if (status === 'paused')    return <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700  dark:text-amber-400  bg-amber-100  dark:bg-amber-900/40  px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-amber-500  inline-block" />Paused</span>;
+  if (status === 'completed') return <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500  dark:text-gray-400  bg-gray-100   dark:bg-gray-700       px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-gray-400   inline-block" />Done</span>;
+  return null;
 }
 
 // ── Main page ─────────────────────────────────────────────
@@ -74,7 +98,7 @@ export default function DashboardPage() {
   const { programs, isLoaded: programsLoaded, initializeFromDB: initPrograms } = useProgramStore();
   const { exercises, isLoaded: exercisesLoaded, initializeFromDB: initExercises } = useExerciseStore();
   const { templates, isLoaded: templatesLoaded, initializeFromDB: initTemplates } = useTemplateStore();
-  const { clinicName, therapistName, isLoaded: settingsLoaded } = useSettingsStore();
+  const { clinicName, clinicLogo, therapistName, profileType, isLoaded: settingsLoaded } = useSettingsStore();
 
   useEffect(() => {
     if (!clientsLoaded)   initClients();
@@ -85,387 +109,381 @@ export default function DashboardPage() {
   }, []);
 
   // ── Derived ──────────────────────────────────────────────
+  const isGym = profileType === 'gym';
+  const isLoading = !clientsLoaded || !programsLoaded || !exercisesLoaded || !templatesLoaded;
+  const isSetupIncomplete = settingsLoaded && !clinicName;
+
+  const activePrograms  = useMemo(() => programs.filter((p) => p.status === 'active'),    [programs]);
+  const pausedPrograms  = useMemo(() => programs.filter((p) => p.status === 'paused'),    [programs]);
+
+  const clientsThisMonth = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(1); cutoff.setHours(0, 0, 0, 0);
+    return clients.filter((c) => new Date(c.createdAt) >= cutoff).length;
+  }, [clients]);
+
   const recentPrograms = useMemo(
-    () =>
-      [...programs]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 6),
+    () => [...programs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6),
     [programs],
   );
 
   const recentClients = useMemo(
-    () =>
-      [...clients]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 6),
+    () => [...clients].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5),
     [clients],
   );
 
   const clientMap = useMemo(() => new Map(clients.map((c) => [c.id, c.name])), [clients]);
 
-  const programCountByClient = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of programs) {
-      map.set(p.clientId, (map.get(p.clientId) ?? 0) + 1);
-    }
-    return map;
-  }, [programs]);
+  const clientsWithNoProgram = useMemo(() => {
+    const assigned = new Set(programs.map((p) => p.clientId));
+    return clients.filter((c) => !assigned.has(c.id));
+  }, [clients, programs]);
 
-  const isLoading = !clientsLoaded || !programsLoaded || !exercisesLoaded;
-  const isSetupIncomplete = settingsLoaded && !clinicName;
   const hasNoData = clientsLoaded && programsLoaded && clients.length === 0 && programs.length === 0;
 
-  const greeting = therapistName ? `Welcome, Dr. ${therapistName.split(' ')[0]}` : 'Welcome back';
+  const greetingText = therapistName
+    ? isGym
+      ? `${greeting()}, ${therapistName.split(' ')[0]}`
+      : `${greeting()}, Dr. ${therapistName.split(' ')[0]}`
+    : `${greeting()}`;
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-5 min-h-screen">
+      <GymFloatAnimation count={18} />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{greeting}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          {clinicName || 'Rehab Program Builder'} · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
+      <div className="relative z-10 space-y-5">
 
-      {/* Setup banner */}
-      {isSetupIncomplete && (
-        <Link
-          to="/config"
-          className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-5 py-3 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-        >
-          <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Clinic profile is incomplete</p>
-            <p className="text-xs text-amber-600 dark:text-amber-400">Add your clinic name and logo so exports look professional.</p>
-          </div>
-          <ChevronRight size={16} className="text-amber-500 shrink-0" />
-        </Link>
-      )}
-
-      {/* Stats row */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Clients"   value={clients.length}   icon={Users}         color="bg-blue-100 dark:bg-blue-900/30"    textColor="text-blue-600 dark:text-blue-400"    to="/clients" />
-          <StatCard label="Programs"  value={programs.length}  icon={ClipboardList} color="bg-teal-100 dark:bg-teal-900/30"    textColor="text-teal-600 dark:text-teal-400"    to="/programs" />
-          <StatCard label="Exercises" value={exercises.length} icon={Dumbbell}      color="bg-violet-100 dark:bg-violet-900/30" textColor="text-violet-600 dark:text-violet-400" to="/exercises" />
-          <StatCard label="Templates" value={templates.length} icon={Library}       color="bg-amber-100 dark:bg-amber-900/30"  textColor="text-amber-600 dark:text-amber-400"  to="/template-library" />
-        </div>
-      )}
-
-      {/* Get started — shown only when no data yet */}
-      {hasNoData && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-          <div className="w-14 h-14 bg-teal-50 dark:bg-teal-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ClipboardList size={28} className="text-teal-600 dark:text-teal-400" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Get started</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-            Add your first client, then build them a rehabilitation program.
-          </p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Link
-              to="/clients"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <UserPlus size={15} />
-              Add Client
-            </Link>
-            <Link
-              to="/exercises"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              <Dumbbell size={15} />
-              Browse Exercises
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Main content grid */}
-      {!hasNoData && !isLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-          {/* Recent Programs (wider) */}
-          <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-teal-600 dark:text-teal-400" />
-                <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent Programs</h2>
-              </div>
-              <Link to="/programs" className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium">
-                View all
-              </Link>
-            </div>
-
-            {recentPrograms.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500">No programs yet.</p>
-                <Link to="/clients" className="mt-2 inline-block text-sm text-teal-600 dark:text-teal-400 hover:underline">
-                  Start by adding a client →
-                </Link>
-              </div>
+        {/* ── Page header ── */}
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            {clinicLogo ? (
+              <img
+                src={clinicLogo}
+                alt={clinicName || 'Clinic logo'}
+                className="w-10 h-10 rounded-xl object-contain bg-gray-100 dark:bg-gray-700 p-1 shrink-0"
+              />
             ) : (
-              <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-                {recentPrograms.map((program) => {
-                  const clientName = clientMap.get(program.clientId) ?? 'Unknown client';
-                  const totalExercises = program.sessions.reduce((sum, s) => sum + s.exercises.length, 0);
-                  return (
-                    <li key={program.id}>
-                      <Link
-                        to={`/programs/${program.id}/preview`}
-                        className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
-                        {/* Color dot */}
-                        <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0" />
-
-                        {/* Main info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            {program.name || 'Untitled program'}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {clientName}
-                            {program.condition ? ` · ${program.condition}` : ''}
-                          </p>
-                        </div>
-
-                        {/* Meta pills */}
-                        <div className="hidden sm:flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-                            {program.sessions.length} session{program.sessions.length !== 1 ? 's' : ''}
-                          </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-                            {totalExercises} ex
-                          </span>
-                        </div>
-
-                        {/* Date + chevron */}
-                        <div className="text-right shrink-0 ml-2">
-                          <p className="text-xs text-gray-400 dark:text-gray-500">{timeAgo(program.createdAt)}</p>
-                        </div>
-                        <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-
-          {/* Recent Clients (narrower) */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-blue-600 dark:text-blue-400" />
-                <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent Clients</h2>
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <LayoutDashboard size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <Link to="/clients" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                View all
-              </Link>
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{greetingText}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {clinicName ? ` · ${clinicName}` : ''}
+              </p>
             </div>
-
-            {recentClients.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500">No clients yet.</p>
-                <Link to="/clients" className="mt-2 inline-block text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                  Add your first client →
-                </Link>
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-                {recentClients.map((client) => {
-                  const programCount = programCountByClient.get(client.id) ?? 0;
-                  const initials = client.name
-                    .split(' ')
-                    .map((w) => w[0])
-                    .slice(0, 2)
-                    .join('')
-                    .toUpperCase();
-                  return (
-                    <li key={client.id}>
-                      <Link
-                        to={`/clients/${client.id}`}
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
-                        {/* Avatar */}
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{initials}</span>
-                        </div>
-
-                        {/* Name */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{client.name}</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            {programCount} program{programCount !== 1 ? 's' : ''}
-                            {client.age ? ` · Age ${client.age}` : ''}
-                          </p>
-                        </div>
-
-                        <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 shrink-0" />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
           </div>
         </div>
-      )}
 
-      {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-          Quick Actions
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/clients"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <UserPlus size={15} />
-            New Client
-          </Link>
-          <Link
-            to="/programs"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            New Program
-          </Link>
-          <Link
-            to="/exercises"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-          >
-            <Dumbbell size={15} />
-            Exercise Library
-          </Link>
-          <Link
-            to="/template-library"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-          >
-            <Library size={15} />
-            Template Library
-          </Link>
+        {/* ── Setup banner ── */}
+        {isSetupIncomplete && (
           <Link
             to="/config"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+            className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-5 py-3 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
           >
-            <Settings size={15} />
-            Configuration
+            <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                {isGym ? 'Gym profile is incomplete' : 'Clinic profile is incomplete'}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {isGym
+                  ? 'Add your gym name and logo so training plan exports look professional.'
+                  : 'Add your clinic name and logo so exports look professional.'}
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-amber-500 shrink-0" />
           </Link>
-        </div>
-      </div>
+        )}
 
-      {/* Programs per client summary — shown only when there are clients and programs */}
-      {!isLoading && clients.length > 0 && programs.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-            <CalendarDays size={16} className="text-violet-600 dark:text-violet-400" />
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100">Program Overview</h2>
+        {/* ── Stat cards ── */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-[110px] bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+            ))}
           </div>
-          {/* Mobile card list */}
-          <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-            {clients
-              .filter((c) => programCountByClient.has(c.id))
-              .sort((a, b) => {
-                const latestA = programs.filter((p) => p.clientId === a.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
-                const latestB = programs.filter((p) => p.clientId === b.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
-                return latestB.localeCompare(latestA);
-              })
-              .slice(0, 8)
-              .map((client) => {
-                const latestProgram = programs
-                  .filter((p) => p.clientId === client.id)
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-                if (!latestProgram) return null;
-                return (
-                  <div key={client.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                    <div className="min-w-0">
-                      <Link to={`/clients/${client.id}`} className="font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400 truncate block">
-                        {client.name}
-                      </Link>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{latestProgram.name || '—'}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{latestProgram.condition || '—'} · {fmtDate(latestProgram.startDate)} · {latestProgram.durationWeeks}w</p>
-                    </div>
-                    <Link to={`/programs/${latestProgram.id}/preview`} className="shrink-0 text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium">
-                      View
-                    </Link>
-                  </div>
-                );
-              })}
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Total Clients"
+              value={clients.length}
+              sub={clientsThisMonth > 0 ? `+${clientsThisMonth} this month` : undefined}
+              icon={Users}
+              gradient="bg-gradient-to-br from-orange-500 to-red-600"
+              to="/clients"
+            />
+            <StatCard
+              label="Active Programs"
+              value={activePrograms.length}
+              sub={programs.length > 0 ? `${programs.length} total` : undefined}
+              icon={ClipboardList}
+              gradient="bg-gradient-to-br from-teal-500 to-teal-700"
+              to="/programs"
+            />
+            <StatCard
+              label="Exercise Library"
+              value={exercises.length}
+              icon={Dumbbell}
+              gradient="bg-gradient-to-br from-violet-500 to-violet-700"
+              to="/exercises"
+            />
+            <StatCard
+              label="Saved Templates"
+              value={templates.filter((t) => !t.isBuiltIn).length}
+              icon={Library}
+              gradient="bg-gradient-to-br from-amber-500 to-orange-600"
+              to="/templates"
+            />
           </div>
+        )}
 
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-700/50">
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Client</th>
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Latest Program</th>
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Condition</th>
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Start Date</th>
-                  <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</th>
-                  <th className="px-5 py-2.5" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                {clients
-                  .filter((c) => programCountByClient.has(c.id))
-                  .sort((a, b) => {
-                    const latestA = programs.filter((p) => p.clientId === a.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
-                    const latestB = programs.filter((p) => p.clientId === b.id).sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())[0]?.createdAt ?? '';
-                    return latestB.localeCompare(latestA);
-                  })
-                  .slice(0, 8)
-                  .map((client) => {
-                    const latestProgram = programs
-                      .filter((p) => p.clientId === client.id)
-                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-                    if (!latestProgram) return null;
+        {/* ── Get started (no data) ── */}
+        {hasNoData && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+            <div className="w-14 h-14 bg-teal-50 dark:bg-teal-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ClipboardList size={28} className="text-teal-600 dark:text-teal-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Get started</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+              Add your first client, then build them a {isGym ? 'training plan' : 'rehabilitation program'}.
+            </p>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Link
+                to="/clients"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <UserPlus size={15} />
+                Add Client
+              </Link>
+              <Link
+                to="/exercises"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <Dumbbell size={15} />
+                Browse Exercises
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ── Main grid ── */}
+        {!hasNoData && !isLoading && (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+            {/* Recent Programs */}
+            <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={16} className="text-teal-600 dark:text-teal-400" />
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent Programs</h2>
+                </div>
+                <Link to="/programs" className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1">
+                  View all <ChevronRight size={12} />
+                </Link>
+              </div>
+
+              {recentPrograms.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-gray-400 dark:text-gray-500">No programs yet.</p>
+                  <Link to="/clients" className="mt-2 inline-block text-sm text-teal-600 dark:text-teal-400 hover:underline">
+                    Start by adding a client →
+                  </Link>
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-50 dark:divide-gray-700/60">
+                  {recentPrograms.map((program) => {
+                    const clientName = clientMap.get(program.clientId) ?? 'Unknown client';
+                    const totalExercises = program.sessions.reduce((sum, s) => sum + s.exercises.length, 0);
                     return (
-                      <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                        <td className="px-5 py-3">
-                          <Link to={`/clients/${client.id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-teal-600 dark:hover:text-teal-400">
-                            {client.name}
-                          </Link>
-                        </td>
-                        <td className="px-5 py-3 text-gray-700 dark:text-gray-300 truncate max-w-[180px]">
-                          {latestProgram.name || '—'}
-                        </td>
-                        <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
-                          {latestProgram.condition || '—'}
-                        </td>
-                        <td className="px-5 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {fmtDate(latestProgram.startDate)}
-                        </td>
-                        <td className="px-5 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {latestProgram.durationWeeks}w
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <Link
-                            to={`/programs/${latestProgram.id}/preview`}
-                            className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
+                      <li key={program.id}>
+                        <Link
+                          to={`/programs/${program.id}/preview`}
+                          className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              {program.name || 'Untitled program'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                              {clientName}{program.condition ? ` · ${program.condition}` : ''}
+                            </p>
+                          </div>
+
+                          <div className="hidden sm:flex items-center gap-2 shrink-0">
+                            <StatusBadge status={program.status} />
+                            <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                              {program.sessions.length}s · {totalExercises}ex
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{timeAgo(program.createdAt)}</p>
+                          <ChevronRight size={13} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                        </Link>
+                      </li>
                     );
                   })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                </ul>
+              )}
+            </div>
 
+            {/* Right column */}
+            <div className="lg:col-span-2 flex flex-col gap-5">
+
+              {/* Recent Clients */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} className="text-orange-500 dark:text-orange-400" />
+                    <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent Clients</h2>
+                  </div>
+                  <Link to="/clients" className="text-xs text-orange-500 dark:text-orange-400 hover:underline font-medium flex items-center gap-1">
+                    View all <ChevronRight size={12} />
+                  </Link>
+                </div>
+
+                {recentClients.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-gray-400 dark:text-gray-500">No clients yet.</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-50 dark:divide-gray-700/60">
+                    {recentClients.map((client) => {
+                      const initials = client.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+                      const progCount = programs.filter((p) => p.clientId === client.id).length;
+                      return (
+                        <li key={client.id}>
+                          <Link
+                            to={`/clients/${client.id}`}
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shrink-0 shadow-sm">
+                              <span className="text-xs font-bold text-white">{initials}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{client.name}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {progCount} program{progCount !== 1 ? 's' : ''}
+                                {client.age ? ` · Age ${client.age}` : ''}
+                              </p>
+                            </div>
+                            <ChevronRight size={13} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              {/* Paused programs alert */}
+              {pausedPrograms.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-800/50 overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-3.5 border-b border-amber-100 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-900/10">
+                    <PauseCircle size={15} className="text-amber-600 dark:text-amber-400" />
+                    <h2 className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Paused Programs</h2>
+                  </div>
+                  <ul className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    {pausedPrograms.slice(0, 3).map((p) => (
+                      <li key={p.id}>
+                        <Link
+                          to={`/programs/${p.id}/preview`}
+                          className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{p.name || 'Untitled'}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{clientMap.get(p.clientId) ?? '—'}</p>
+                          </div>
+                          <ChevronRight size={13} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Clients with no program */}
+              {clientsWithNoProgram.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-violet-200 dark:border-violet-800/50 overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-3.5 border-b border-violet-100 dark:border-violet-800/30 bg-violet-50/50 dark:bg-violet-900/10">
+                    <AlertTriangle size={15} className="text-violet-600 dark:text-violet-400" />
+                    <h2 className="font-semibold text-violet-800 dark:text-violet-300 text-sm">No Program Assigned</h2>
+                    <span className="ml-auto text-xs bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-full font-medium">
+                      {clientsWithNoProgram.length}
+                    </span>
+                  </div>
+                  <ul className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    {clientsWithNoProgram.slice(0, 3).map((c) => {
+                      const initials = c.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+                      return (
+                        <li key={c.id}>
+                          <Link
+                            to={`/clients/${c.id}`}
+                            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-violet-600 dark:text-violet-400">{initials}</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 truncate">{c.name}</p>
+                            <Link
+                              to={`/programs/new?clientId=${c.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs text-violet-600 dark:text-violet-400 hover:underline font-medium shrink-0"
+                            >
+                              + Assign
+                            </Link>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                    {clientsWithNoProgram.length > 3 && (
+                      <li className="px-5 py-2 text-xs text-gray-400 dark:text-gray-500">
+                        +{clientsWithNoProgram.length - 3} more without a program
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* ── Progress summary (shows when there are completed programs) ── */}
+        {!isLoading && programs.filter((p) => p.status === 'completed').length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col items-center justify-center gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 py-5">
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle size={18} />
+                <span className="text-2xl font-extrabold">{programs.filter((p) => p.status === 'completed').length}</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Completed</p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 py-5">
+              <div className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400">
+                <Activity size={18} />
+                <span className="text-2xl font-extrabold">{activePrograms.length}</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Active</p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 py-5">
+              <div className="flex items-center gap-1.5 text-violet-600 dark:text-violet-400">
+                <TrendingUp size={18} />
+                <span className="text-2xl font-extrabold">
+                  {programs.length > 0
+                    ? Math.round((programs.filter((p) => p.status === 'completed').length / programs.length) * 100)
+                    : 0}%
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Completion rate</p>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

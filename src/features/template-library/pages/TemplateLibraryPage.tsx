@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
-import { db } from '../../../db';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { useSettingsStore } from '../../../store/settingsStore';
+import { Search, Library } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { dbRowToTemplate } from '../../../lib/mappers';
 import type { Template } from '../../../types';
 import { useTemplateLibraryStore } from '../../../store/templateLibraryStore';
-import { useSettingsStore } from '../../../store/settingsStore';
+import { usePlanStore } from '../../../store/planStore';
 import LibraryTemplateCard from '../components/LibraryTemplateCard';
 import TemplatePreviewModal from '../components/TemplatePreviewModal';
 import FavouritesFilterButton from '../components/FavouritesFilterButton';
@@ -13,11 +15,15 @@ export default function TemplateLibraryPage() {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
 
+  const isGym = useSettingsStore((s) => s.profileType) === 'gym';
   const settingsLoaded = useSettingsStore((s) => s.isLoaded);
+  const isPro = usePlanStore((s) => s.isPro)();
+  const useTemplateLocked = !isPro;
   const { favouriteIds, showFavouritesOnly, isInitialized, initializeFromSettings, toggleFavourite, setShowFavouritesOnly } =
     useTemplateLibraryStore();
 
@@ -39,10 +45,17 @@ export default function TemplateLibraryPage() {
   }, [isInitialized, templates]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    db.templates.toArray().then((rows) => {
-      setTemplates(rows);
+    const run = async () => {
+      const { data, error } = await supabase.from('templates').select('*');
+      if (error) {
+        console.error('Failed to load templates:', error);
+        setLoadError(true);
+      } else {
+        setTemplates((data ?? []).map(dbRowToTemplate));
+      }
       setLoading(false);
-    });
+    };
+    run();
   }, []);
 
   const conditions = useMemo(() => {
@@ -75,6 +88,8 @@ export default function TemplateLibraryPage() {
     navigate(`/programs/new?template=${template.id}`);
   };
 
+  if (settingsLoaded && isGym) return <Navigate to="/" replace />;
+
   if (loading || !isInitialized) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
@@ -83,13 +98,34 @@ export default function TemplateLibraryPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+        <p className="text-gray-700 dark:text-gray-300 font-medium">Failed to load templates</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Check your connection and try refreshing the page.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-1 px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full gap-4 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Template Library</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {templates.length} pre-built programme templates — browse, preview, and use as a starting point.
-        </p>
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <Library size={20} className="text-amber-600 dark:text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Template Library</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{templates.length} pre-built templates — browse, preview, and use as a starting point.</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -153,6 +189,7 @@ export default function TemplateLibraryPage() {
               key={template.id}
               template={template}
               isFavourite={favouriteIds.has(template.id)}
+              locked={useTemplateLocked}
               onToggleFavourite={toggleFavourite}
               onPreview={setPreviewTemplate}
               onSelect={handleSelect}
@@ -166,6 +203,7 @@ export default function TemplateLibraryPage() {
         <TemplatePreviewModal
           template={previewTemplate}
           isFavourite={favouriteIds.has(previewTemplate.id)}
+          locked={useTemplateLocked}
           onToggleFavourite={toggleFavourite}
           onSelect={(t) => {
             setPreviewTemplate(null);

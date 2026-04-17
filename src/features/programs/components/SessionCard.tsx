@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
+import { useConfirmStore } from '../../../store/confirmStore';
 import type { ProgramExercise, Session } from '../../../types';
 import SortableExerciseList from './SortableExerciseList';
 
@@ -10,7 +11,7 @@ interface SessionCardProps {
   onAddExercise: () => void;
   onUpdateParams: (
     programExerciseId: string,
-    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'restSeconds' | 'notes'>>
+    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'weightKg' | 'restSeconds' | 'notes'>>
   ) => void;
   onRemoveExercise: (programExerciseId: string) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
@@ -27,6 +28,7 @@ export default function SessionCard({
 }: SessionCardProps) {
   const [label, setLabel] = useState(session.label);
   const inputRef = useRef<HTMLInputElement>(null);
+  const showConfirm = useConfirmStore((s) => s.showConfirm);
 
   function handleBlur() {
     const trimmed = label.trim();
@@ -49,7 +51,12 @@ export default function SessionCard({
           className="flex-1 bg-transparent border-none font-semibold text-gray-900 dark:text-gray-100 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 -mx-1"
         />
         <button
-          onClick={onDelete}
+          onClick={() => showConfirm({
+            title: 'Delete Session',
+            message: `Delete "${session.label}" and all its exercises?`,
+            variant: 'danger',
+            onConfirm: onDelete,
+          })}
           className="shrink-0 p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           aria-label={`Delete session ${session.label}`}
         >

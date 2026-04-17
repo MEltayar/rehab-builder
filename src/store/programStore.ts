@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import { arrayMove } from '@dnd-kit/sortable';
-import { db } from '../db';
+import { supabase } from '../lib/supabase';
+import { programToDbRow } from '../lib/mappers';
 import type { Program, Session, ProgramExercise, Template } from '../types';
 import { getAllPrograms } from '../features/programs/services/programService';
+import { usePlanStore } from './planStore';
+import { useSettingsStore } from './settingsStore';
 
 interface ProgramStore {
   programs: Program[];
@@ -11,10 +14,11 @@ interface ProgramStore {
 
   initializeFromDB: () => Promise<void>;
   deleteProgram: (id: string) => Promise<void>;
+  updateProgramStatus: (id: string, status: Program['status']) => Promise<void>;
 
-  startNewDraft: (clientId: string) => void;
+  startNewDraft: (clientId: string) => Promise<void>;
   loadDraftFromProgram: (program: Program) => void;
-  loadDraftFromTemplate: (template: Template) => void;
+  loadDraftFromTemplate: (template: Template) => Promise<void>;
   clearDraft: () => void;
   saveDraft: () => Promise<void>;
 
@@ -31,10 +35,11 @@ interface ProgramStore {
   updateExerciseParams: (
     sessionId: string,
     programExerciseId: string,
-    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'restSeconds' | 'notes'>>
+    params: Partial<Pick<ProgramExercise, 'sets' | 'reps' | 'holdTime' | 'weightKg' | 'restSeconds' | 'notes'>>
   ) => void;
   removeExerciseFromSession: (sessionId: string, programExerciseId: string) => void;
   reorderExercisesInSession: (sessionId: string, oldIndex: number, newIndex: number) => void;
+  reorderSessions: (oldIndex: number, newIndex: number) => void;
 }
 
 export const useProgramStore = create<ProgramStore>((set, get) => ({
@@ -43,6 +48,7 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
   draft: null,
 
   initializeFromDB: async () => {
+    if (get().isLoaded) return;
     const all = await getAllPrograms();
     set({ programs: all, isLoaded: true });
   },
@@ -51,7 +57,8 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
     const previous = get().programs;
     set((state) => ({ programs: state.programs.filter((p) => p.id !== id) }));
     try {
-      await db.programs.delete(id);
+      const { error } = await supabase.from('programs').delete().eq('id', id);
+      if (error) throw error;
     } catch (err) {
       console.error('Failed to delete program:', err);
       set({ programs: previous });
@@ -59,19 +66,35 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
     }
   },
 
-  startNewDraft: (clientId) => {
+  updateProgramStatus: async (id, status) => {
+    const previous = get().programs;
+    set((state) => ({
+      programs: state.programs.map((p) => p.id === id ? { ...p, status } : p),
+    }));
+    const { error } = await supabase.from('programs').update({ status }).eq('id', id);
+    if (error) {
+      set({ programs: previous });
+      throw error;
+    }
+  },
+
+  startNewDraft: async (clientId) => {
+    const { data: { user } } = await supabase.auth.getUser();
     set({
       draft: {
         id: crypto.randomUUID(),
         clientId,
         name: '',
         condition: '',
-        goal: 'Reduce pain and restore normal movement.',
+        goal: useSettingsStore.getState().profileType === 'gym'
+          ? 'Build strength and improve body composition.'
+          : 'Reduce pain and restore normal movement.',
         durationWeeks: 4,
         startDate: new Date().toISOString().split('T')[0],
         sessions: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id,
       },
     });
   },
@@ -80,19 +103,23 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
     set({ draft: JSON.parse(JSON.stringify(program)) });
   },
 
-  loadDraftFromTemplate: (template) => {
+  loadDraftFromTemplate: async (template) => {
+    const { data: { user } } = await supabase.auth.getUser();
     set({
       draft: {
         id: crypto.randomUUID(),
         clientId: '',
         name: template.name,
         condition: template.condition,
-        goal: 'Reduce pain and restore normal movement.',
+        goal: useSettingsStore.getState().profileType === 'gym'
+          ? 'Build strength and improve body composition.'
+          : 'Reduce pain and restore normal movement.',
         durationWeeks: 4,
         startDate: new Date().toISOString().split('T')[0],
         sessions: JSON.parse(JSON.stringify(template.sessions)),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id,
       },
     });
   },
@@ -102,8 +129,26 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
   saveDraft: async () => {
     const { draft, programs } = get();
     if (!draft) throw new Error('No draft to save');
-    const updated: Program = { ...draft, updatedAt: new Date().toISOString() };
-    await db.programs.put(updated);
+
+    // Always resolve the current user so user_id is never missing in the DB row
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated. Please sign in again.');
+
+    // Enforce program limit for new programs only (not edits)
+    const isNew = !programs.some((p) => p.id === draft.id);
+    if (isNew && draft.clientId) {
+      const { maxProgramsPerClient } = usePlanStore.getState().limits();
+      const clientProgramCount = programs.filter((p) => p.clientId === draft.clientId).length;
+      if (clientProgramCount >= maxProgramsPerClient) {
+        throw new Error(`Program limit reached. Trial accounts can only have ${maxProgramsPerClient} programs per client. Upgrade to Pro for unlimited programs.`);
+      }
+    }
+
+    const updated: Program = { ...draft, updatedAt: new Date().toISOString(), userId: user.id };
+    const { error } = await supabase
+      .from('programs')
+      .upsert(programToDbRow(updated));
+    if (error) throw error;
     const exists = programs.some((p) => p.id === updated.id);
     set({
       draft: updated,
@@ -232,6 +277,18 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
             }));
             return { ...s, exercises: reordered };
           }),
+        },
+      };
+    });
+  },
+
+  reorderSessions: (oldIndex, newIndex) => {
+    set((state) => {
+      if (!state.draft) return state;
+      return {
+        draft: {
+          ...state.draft,
+          sessions: arrayMove(state.draft.sessions, oldIndex, newIndex),
         },
       };
     });

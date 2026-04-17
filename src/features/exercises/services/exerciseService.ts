@@ -1,13 +1,74 @@
-import { db } from '../../../db';
-import { SEED_EXERCISES } from '../../../db/seed';
+import { supabase } from '../../../lib/supabase';
+import { SEED_EXERCISES, GYM_SEED_EXERCISES } from '../../../db/seed';
+import { dbRowToExercise, exerciseToDbRow } from '../../../lib/mappers';
+import { useUserStore } from '../../../store/userStore';
+import type { Exercise } from '../../../types';
 
 export async function seedIfEmpty(): Promise<void> {
-  const count = await db.exercises.count();
-  if (count === 0) {
-    await db.exercises.bulkAdd(SEED_EXERCISES);
+  const { count } = await supabase
+    .from('exercises')
+    .select('*', { count: 'exact', head: true });
+  if ((count ?? 0) === 0) {
+    const rows = SEED_EXERCISES.map(exerciseToDbRow);
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await supabase.from('exercises').insert(rows.slice(i, i + 100));
+      if (error) throw error;
+    }
   }
 }
 
-export async function getAllExercises() {
-  return db.exercises.toArray();
+// Bump this string whenever new exercises or video URLs are added to GYM_SEED_EXERCISES.
+// Each user's browser will re-run the sync exactly once when the version changes.
+const GYM_SEED_VERSION = 'v3';
+const GYM_SEED_KEY = 'gymSeedVersion';
+const GYM_VIDEO_KEY = 'gymVideoSyncVersion';
+
+export async function seedGymExercisesIfMissing(): Promise<void> {
+  if (localStorage.getItem(GYM_SEED_KEY) === GYM_SEED_VERSION) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  // Upsert by id — adds new exercises, skips ones that already exist.
+  // Explicitly set user_id so RLS with check passes; ignoreDuplicates skips
+  // rows that already exist from another user's seed run.
+  const rows = GYM_SEED_EXERCISES.map((ex) => ({ ...exerciseToDbRow(ex), user_id: user.id }));
+  for (let i = 0; i < rows.length; i += 100) {
+    const { error } = await supabase
+      .from('exercises')
+      .upsert(rows.slice(i, i + 100), { onConflict: 'id', ignoreDuplicates: true });
+    if (error) { console.error('Failed to upsert gym exercises:', error); return; }
+  }
+  localStorage.setItem(GYM_SEED_KEY, GYM_SEED_VERSION);
+}
+
+export async function syncGymExerciseVideos(): Promise<void> {
+  if (localStorage.getItem(GYM_VIDEO_KEY) === GYM_SEED_VERSION) return;
+  const withVideo = GYM_SEED_EXERCISES.filter((ex) => ex.videoUrl);
+  await Promise.all(
+    withVideo.map((ex) =>
+      supabase
+        .from('exercises')
+        .update({ video_url: ex.videoUrl })
+        .eq('id', ex.id)
+        .or('video_url.is.null,video_url.eq.'),
+    ),
+  );
+  localStorage.setItem(GYM_VIDEO_KEY, GYM_SEED_VERSION);
+}
+
+export async function getAllExercises(): Promise<Exercise[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  const isAdmin = useUserStore.getState().canAccessAdmin();
+
+  // Admins see all exercises. Regular users see built-in + their own custom.
+  let query = supabase.from('exercises').select('*');
+  if (!isAdmin && userId) {
+    query = query.or(`is_custom.eq.false,user_id.eq.${userId}`);
+  } else if (!isAdmin) {
+    query = query.eq('is_custom', false);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(dbRowToExercise);
 }

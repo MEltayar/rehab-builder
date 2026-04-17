@@ -5,9 +5,11 @@ interface TemplateSectionProps {
   title: string;
   templates: Template[];
   emptyMessage?: string;
+  canUse?: boolean;
+  onPreview?: (template: Template) => void;
 }
 
-export default function TemplateSection({ title, templates, emptyMessage }: TemplateSectionProps) {
+export default function TemplateSection({ title, templates, emptyMessage, canUse = true, onPreview }: TemplateSectionProps) {
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide text-xs">
@@ -21,7 +23,7 @@ export default function TemplateSection({ title, templates, emptyMessage }: Temp
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
-            <TemplateCard key={template.id} template={template} />
+            <TemplateCard key={template.id} template={template} canUse={canUse} onPreview={onPreview} />
           ))}
         </div>
       )}

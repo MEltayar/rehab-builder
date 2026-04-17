@@ -1,9 +1,11 @@
 import { Star } from 'lucide-react';
 import type { Template } from '../../../types';
+import { LockedButton } from '../../../components/UpgradeLock';
 
 interface Props {
   template: Template;
   isFavourite: boolean;
+  locked: boolean;
   onToggleFavourite: (id: string) => void;
   onPreview: (template: Template) => void;
   onSelect: (template: Template) => void;
@@ -12,6 +14,7 @@ interface Props {
 export default function LibraryTemplateCard({
   template,
   isFavourite,
+  locked,
   onToggleFavourite,
   onPreview,
   onSelect,
@@ -59,21 +62,22 @@ export default function LibraryTemplateCard({
         {template.sessions.reduce((sum, s) => sum + s.exercises.length, 0)} exercises
       </div>
 
-      <div className="flex gap-2 mt-auto">
+      <div className="flex justify-end gap-2 mt-auto">
         <button
           type="button"
           onClick={() => onPreview(template)}
-          className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="px-3 py-1.5 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           Preview
         </button>
-        <button
-          type="button"
+        <LockedButton
+          locked={locked}
+          feature="templates"
           onClick={() => onSelect(template)}
-          className="flex-1 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          className="px-3 py-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
         >
           Use Template
-        </button>
+        </LockedButton>
       </div>
     </div>
   );

@@ -1,40 +1,28 @@
 import { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Library } from 'lucide-react';
 import { useTemplateStore } from '../../../store/templateStore';
-import TemplateSection from '../components/TemplateSection';
+import TemplateCard from '../components/TemplateCard';
+import { usePlanStore } from '../../../store/planStore';
 
 export default function TemplatesPage() {
   const templates = useTemplateStore((s) => s.templates);
   const isLoaded = useTemplateStore((s) => s.isLoaded);
+  const canSaveTemplate = usePlanStore((s) => s.limits().canSaveTemplate);
   const [search, setSearch] = useState('');
 
   const term = search.trim().toLowerCase();
 
-  const builtIn = useMemo(
-    () =>
-      templates.filter(
-        (t) =>
-          t.isBuiltIn &&
-          (!term ||
-            t.name.toLowerCase().includes(term) ||
-            t.condition.toLowerCase().includes(term)),
-      ),
-    [templates, term],
-  );
-
-  const custom = useMemo(
+  const savedTemplates = useMemo(
     () =>
       templates.filter(
         (t) =>
           !t.isBuiltIn &&
           (!term ||
             t.name.toLowerCase().includes(term) ||
-            t.condition.toLowerCase().includes(term)),
+            (t.condition ?? '').toLowerCase().includes(term)),
       ),
     [templates, term],
   );
-
-  const noResults = term && builtIn.length === 0 && custom.length === 0;
 
   if (!isLoaded) {
     return (
@@ -46,11 +34,9 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Page header */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Templates</h1>
-
-        {/* Search */}
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Templates</h1>
         <div className="relative w-64">
           <Search
             size={14}
@@ -66,32 +52,28 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {noResults ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-2">
-          <p className="text-gray-500 dark:text-gray-400 font-medium">No templates found</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">
-            Try a different name or condition.
+      {/* Content */}
+      {savedTemplates.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+          <div className="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+            <Library size={26} className="text-amber-500 dark:text-amber-400" />
+          </div>
+          <p className="text-gray-700 dark:text-gray-300 font-medium">
+            {term ? 'No templates match your search.' : 'No saved templates yet.'}
           </p>
+          {!term && (
+            <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs">
+              {canSaveTemplate
+                ? 'Open any program, then use "Save as Template" to build your library.'
+                : 'Upgrade to Pro to save programs as reusable templates.'}
+            </p>
+          )}
         </div>
       ) : (
-        <div className="flex flex-col gap-8">
-          <TemplateSection
-            title="Built-in Templates"
-            templates={builtIn}
-            emptyMessage="No built-in templates match your search."
-          />
-
-          <div className="border-t border-gray-200 dark:border-gray-700" />
-
-          <TemplateSection
-            title="My Templates"
-            templates={custom}
-            emptyMessage={
-              term
-                ? 'No custom templates match your search.'
-                : 'No custom templates yet. Save a program as a template to get started.'
-            }
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {savedTemplates.map((template) => (
+            <TemplateCard key={template.id} template={template} canUse={canSaveTemplate} />
+          ))}
         </div>
       )}
     </div>

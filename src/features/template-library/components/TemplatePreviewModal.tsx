@@ -1,10 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { X, Star } from 'lucide-react';
 import type { Template } from '../../../types';
+import { LockedButton } from '../../../components/UpgradeLock';
+import { useExerciseStore } from '../../../store/exerciseStore';
 
 interface Props {
   template: Template;
   isFavourite: boolean;
+  locked: boolean;
   onToggleFavourite: (id: string) => void;
   onSelect: (template: Template) => void;
   onClose: () => void;
@@ -13,11 +16,14 @@ interface Props {
 export default function TemplatePreviewModal({
   template,
   isFavourite,
+  locked,
   onToggleFavourite,
   onSelect,
   onClose,
 }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const exercises = useExerciseStore((s) => s.exercises);
+  const exerciseMap = useMemo(() => new Map(exercises.map((e) => [e.id, e.name])), [exercises]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -103,7 +109,9 @@ export default function TemplatePreviewModal({
                       <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center shrink-0 font-medium">
                         {ex.order}
                       </span>
-                      <span className="flex-1 truncate">{ex.exerciseId}</span>
+                      <span className="flex-1 truncate">
+                        {exerciseMap.get(ex.exerciseId) ?? <span className="text-amber-500 dark:text-amber-400 italic">Unknown exercise</span>}
+                      </span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
                         {ex.sets && ex.reps ? `${ex.sets}×${ex.reps}` : ex.sets ? `${ex.sets} sets` : ex.reps ? ex.reps : ''}
                         {ex.holdTime ? ` · ${ex.holdTime}s hold` : ''}
@@ -125,13 +133,14 @@ export default function TemplatePreviewModal({
           >
             Close
           </button>
-          <button
-            type="button"
+          <LockedButton
+            locked={locked}
+            feature="templates"
             onClick={() => onSelect(template)}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+            className="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors"
           >
             Use Template
-          </button>
+          </LockedButton>
         </div>
       </div>
     </div>

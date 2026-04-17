@@ -1,18 +1,32 @@
-import { db } from '../../../db';
+import { supabase } from '../../../lib/supabase';
+import { dbRowToProgram, programToDbRow, programPatchToDbRow } from '../../../lib/mappers';
 import type { Program } from '../../../types';
 
 export async function getAllPrograms(): Promise<Program[]> {
-  return db.programs.toArray();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('programs')
+    .select('*')
+    .eq('user_id', user.id);
+  if (error) throw error;
+  return (data ?? []).map(dbRowToProgram);
 }
 
 export async function addProgram(program: Program): Promise<void> {
-  await db.programs.add(program);
+  const { error } = await supabase.from('programs').insert(programToDbRow(program));
+  if (error) throw error;
 }
 
 export async function updateProgram(id: string, data: Partial<Program>): Promise<void> {
-  await db.programs.update(id, data);
+  const { error } = await supabase
+    .from('programs')
+    .update(programPatchToDbRow(data))
+    .eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteProgram(id: string): Promise<void> {
-  await db.programs.delete(id);
+  const { error } = await supabase.from('programs').delete().eq('id', id);
+  if (error) throw error;
 }

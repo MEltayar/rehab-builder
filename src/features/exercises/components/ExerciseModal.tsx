@@ -1,26 +1,42 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { Exercise, ExerciseCategory, ProgressionLevel } from '../../../types';
+import type { Exercise, ExerciseCategory, EquipmentType, ProgressionLevel } from '../../../types';
+import { useSettingsStore } from '../../../store/settingsStore';
 import QRPreview from './QRPreview';
 
-const CATEGORIES: ExerciseCategory[] = [
+const PHYSIO_CATEGORIES: ExerciseCategory[] = [
   'mobility', 'stability', 'strength', 'stretching', 'balance', 'functional',
 ];
+const GYM_CATEGORIES: ExerciseCategory[] = [
+  'chest', 'back', 'shoulders', 'biceps', 'triceps', 'legs', 'glutes', 'core', 'cardio', 'full_body',
+];
+
 const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
-  mobility: 'Mobility',
-  stability: 'Stability',
-  strength: 'Strength',
-  stretching: 'Stretching',
-  balance: 'Balance',
-  functional: 'Functional',
+  mobility: 'Mobility', stability: 'Stability', strength: 'Strength',
+  stretching: 'Stretching', balance: 'Balance', functional: 'Functional',
+  chest: 'Chest', back: 'Back', shoulders: 'Shoulders',
+  biceps: 'Biceps', triceps: 'Triceps', legs: 'Legs',
+  glutes: 'Glutes', core: 'Core', cardio: 'Cardio', full_body: 'Full Body',
 };
+
+const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string }[] = [
+  { value: 'barbell',        label: 'Barbell' },
+  { value: 'dumbbell',       label: 'Dumbbell' },
+  { value: 'cable',          label: 'Cable' },
+  { value: 'machine',        label: 'Machine' },
+  { value: 'bodyweight',     label: 'Bodyweight' },
+  { value: 'kettlebell',     label: 'Kettlebell' },
+  { value: 'resistance_band',label: 'Resistance Band' },
+  { value: 'ez_bar',         label: 'EZ Bar' },
+  { value: 'other',          label: 'Other' },
+];
 const LEVELS: { value: ProgressionLevel; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
   { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
 ];
 
-type ExerciseFormData = Omit<Exercise, 'id' | 'createdAt' | 'isCustom'>;
+type ExerciseFormData = Omit<Exercise, 'id' | 'createdAt' | 'isCustom' | 'progressionGroupId' | 'imageUrl'>;
 
 interface ExerciseModalProps {
   exercise: Exercise | null;
@@ -29,18 +45,21 @@ interface ExerciseModalProps {
   onSave: (data: ExerciseFormData) => void;
 }
 
-const emptyForm = (): ExerciseFormData => ({
-  name: '',
-  category: 'mobility',
-  description: '',
-  tags: [],
-  progressionLevel: undefined,
-  videoUrl: '',
-  notes: '',
+const emptyPhysioForm = (): ExerciseFormData => ({
+  name: '', category: 'mobility', description: '',
+  tags: [], progressionLevel: undefined, videoUrl: '', notes: '',
+});
+
+const emptyGymForm = (): ExerciseFormData => ({
+  name: '', category: 'chest', description: '',
+  tags: [], progressionLevel: undefined, videoUrl: '', notes: '',
+  muscleGroup: '', equipment: undefined,
 });
 
 export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: ExerciseModalProps) {
-  const [form, setForm] = useState<ExerciseFormData>(emptyForm());
+  const isGym = useSettingsStore((s) => s.profileType) === 'gym';
+  const CATEGORIES = isGym ? GYM_CATEGORIES : PHYSIO_CATEGORIES;
+  const [form, setForm] = useState<ExerciseFormData>(isGym ? emptyGymForm() : emptyPhysioForm());
   const [tagsInput, setTagsInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -55,10 +74,12 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
           progressionLevel: exercise.progressionLevel,
           videoUrl: exercise.videoUrl ?? '',
           notes: exercise.notes ?? '',
+          muscleGroup: exercise.muscleGroup ?? '',
+          equipment: exercise.equipment,
         });
         setTagsInput(exercise.tags.join(', '));
       } else {
-        setForm(emptyForm());
+        setForm(isGym ? emptyGymForm() : emptyPhysioForm());
         setTagsInput('');
       }
       setErrors({});
@@ -128,7 +149,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
           </div>
@@ -140,7 +161,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
             <select
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value as ExerciseCategory })}
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
@@ -149,13 +170,41 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
             {errors.category && <p className="text-xs text-red-500">{errors.category}</p>}
           </div>
 
+          {isGym && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Primary Muscle</label>
+                <input
+                  type="text"
+                  value={form.muscleGroup ?? ''}
+                  onChange={(e) => setForm({ ...form, muscleGroup: e.target.value })}
+                  placeholder="e.g. Quadriceps"
+                  className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Equipment</label>
+                <select
+                  value={form.equipment ?? ''}
+                  onChange={(e) => setForm({ ...form, equipment: (e.target.value as EquipmentType) || undefined })}
+                  className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="">— Not set —</option>
+                  {EQUIPMENT_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={3}
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
             />
           </div>
 
@@ -167,7 +216,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
                 ...form,
                 progressionLevel: (e.target.value as ProgressionLevel) || undefined,
               })}
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               <option value="">— Not set —</option>
               {LEVELS.map(({ value, label }) => (
@@ -185,19 +234,31 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="e.g. shoulder, posture, stretching"
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Video URL</label>
-            <input
-              type="text"
-              value={form.videoUrl ?? ''}
-              onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
-              placeholder="https://www.youtube.com/watch?v=…"
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={form.videoUrl ?? ''}
+                onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                placeholder="https://www.youtube.com/watch?v=…"
+                className="px-3 py-2 pr-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full"
+              />
+              {form.videoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, videoUrl: '' })}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+                  aria-label="Remove video"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
             {errors.videoUrl && <p className="text-xs text-red-500">{errors.videoUrl}</p>}
             {form.videoUrl && <QRPreview url={form.videoUrl} />}
           </div>
@@ -208,7 +269,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
               value={form.notes ?? ''}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={2}
-              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
             />
           </div>
 
@@ -222,7 +283,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors"
             >
               {saveLabel}
             </button>

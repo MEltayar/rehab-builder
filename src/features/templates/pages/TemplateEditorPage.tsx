@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronLeft } from 'lucide-react';
 import { useToastStore } from '../../../store/toastStore';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useTemplateStore } from '../../../store/templateStore';
@@ -174,9 +174,9 @@ export default function TemplateEditorPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Edit Template</h1>
         <Link
           to="/templates"
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors shadow-sm"
         >
-          ← Back to Templates
+          <ChevronLeft size={15} /> Back to Templates
         </Link>
       </div>
 
@@ -191,7 +191,7 @@ export default function TemplateEditorPage() {
             value={name}
             onChange={(e) => { setName(e.target.value); setNameError(''); }}
             placeholder="e.g. ACL Recovery Phase 1"
-            className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           {nameError && (
             <p className="text-xs text-red-600 dark:text-red-400">{nameError}</p>
@@ -208,7 +208,7 @@ export default function TemplateEditorPage() {
               value={condition}
               onChange={(e) => setCondition(e.target.value)}
               placeholder="e.g. Rotator cuff rehabilitation"
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
@@ -222,7 +222,7 @@ export default function TemplateEditorPage() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Brief description of this template's purpose…"
             rows={2}
-            className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
           />
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function TemplateEditorPage() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Sessions</h2>
           <button
             onClick={handleAddSession}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-500 dark:text-orange-400 border border-orange-300 dark:border-orange-700 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
           >
             <Plus size={15} />
             Add Session
@@ -260,6 +260,7 @@ export default function TemplateEditorPage() {
           onUpdateParams={handleUpdateParams}
           onRemoveExercise={handleRemoveExercise}
           onReorder={handleReorder}
+          onReorderSessions={() => {}}
         />
       </div>
 
@@ -274,7 +275,7 @@ export default function TemplateEditorPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
+          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
         >
           {saving ? 'Saving…' : 'Save Template'}
         </button>

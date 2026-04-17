@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { db } from '../db';
+import { supabase } from '../lib/supabase';
+import { dbRowToTemplate, templateToDbRow, templatePatchToDbRow } from '../lib/mappers';
 import type { Template } from '../types';
 
 interface TemplateStore {
@@ -17,12 +18,15 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
   isLoaded: false,
 
   initializeFromDB: async () => {
-    const all = await db.templates.toArray();
-    set({ templates: all, isLoaded: true });
+    if (get().isLoaded) return;
+    const { data, error } = await supabase.from('templates').select('*');
+    if (error) throw error;
+    set({ templates: (data ?? []).map(dbRowToTemplate), isLoaded: true });
   },
 
   addTemplate: async (template) => {
-    await db.templates.add(template);
+    const { error } = await supabase.from('templates').insert(templateToDbRow(template));
+    if (error) throw error;
     set((state) => ({ templates: [...state.templates, template] }));
   },
 
@@ -32,7 +36,11 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
       templates: state.templates.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
     try {
-      await db.templates.update(id, patch);
+      const { error } = await supabase
+        .from('templates')
+        .update(templatePatchToDbRow(patch))
+        .eq('id', id);
+      if (error) throw error;
     } catch (err) {
       console.error('Failed to update template:', err);
       set({ templates: previous });
@@ -44,7 +52,8 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
     const previous = get().templates;
     set((state) => ({ templates: state.templates.filter((t) => t.id !== id) }));
     try {
-      await db.templates.delete(id);
+      const { error } = await supabase.from('templates').delete().eq('id', id);
+      if (error) throw error;
     } catch (err) {
       console.error('Failed to delete template:', err);
       set({ templates: previous });

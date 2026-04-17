@@ -1,4 +1,5 @@
-import { db } from './schema';
+import { supabase } from '../lib/supabase';
+import { exerciseToDbRow, templateToDbRow } from '../lib/mappers';
 import type { Exercise, Template } from '../types';
 
 const SEED_EXERCISES: Exercise[] = [
@@ -1035,20 +1036,669 @@ const SEED_TEMPLATES: Template[] = [
 ];
 
 export async function seedDatabase() {
-  const exerciseCount = await db.exercises.count();
-  if (exerciseCount === 0) {
-    await db.exercises.bulkAdd(SEED_EXERCISES);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Run all existence checks in parallel to avoid sequential round-trips
+  const [
+    { count: exerciseCount },
+    { data: existingTemplate },
+    { count: subCount },
+    { count: settingsCount },
+  ] = await Promise.all([
+    supabase.from('exercises').select('*', { count: 'exact', head: true }).eq('is_custom', false),
+    supabase.from('templates').select('id').eq('id', 'tmpl-001').maybeSingle(),
+    supabase.from('subscriptions').select('*', { count: 'exact', head: true }),
+    supabase.from('settings').select('*', { count: 'exact', head: true }),
+  ]);
+
+  // Seed exercises
+  if ((exerciseCount ?? 0) === 0) {
+    const rows = SEED_EXERCISES.map((ex) => ({ ...exerciseToDbRow(ex), user_id: user.id }));
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await supabase
+        .from('exercises')
+        .upsert(rows.slice(i, i + 100), { onConflict: 'id', ignoreDuplicates: true });
+      if (error) console.error('Failed to seed exercises:', error);
+    }
   }
 
-  const seedTemplateExists = await db.templates.get('tmpl-001');
-  if (!seedTemplateExists) {
-    await db.templates.bulkAdd(SEED_TEMPLATES);
+  // Seed built-in templates
+  if (!existingTemplate) {
+    const rows = SEED_TEMPLATES.map(templateToDbRow);
+    for (let i = 0; i < rows.length; i += 100) {
+      const { error } = await supabase
+        .from('templates')
+        .upsert(rows.slice(i, i + 100), { onConflict: 'id', ignoreDuplicates: true });
+      if (error) console.error('Failed to seed templates:', error);
+    }
   }
 
-  const settingsCount = await db.settings.count();
-  if (settingsCount === 0) {
-    await db.settings.add({ id: 1, clinicName: 'Rehab Clinic', darkMode: true });
+  // Seed subscription (trial)
+  if ((subCount ?? 0) === 0) {
+    const { error } = await supabase
+      .from('subscriptions')
+      .insert({ user_id: user.id });
+    if (error) console.error('Failed to seed subscription:', error);
+  }
+
+  // Seed default settings
+  if ((settingsCount ?? 0) === 0) {
+    const { error } = await supabase
+      .from('settings')
+      .insert({ user_id: user.id, clinic_name: 'Rehab Clinic', dark_mode: false });
+    if (error) console.error('Failed to seed settings:', error);
   }
 }
+
+// ── GYM / RESISTANCE EXERCISES ────────────────────────────────────────────────
+
+export const GYM_SEED_EXERCISES: Exercise[] = [
+  // ── CHEST ──────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-chest-001', name: 'Barbell Bench Press', category: 'chest',
+    description: 'Lie on bench, grip bar just outside shoulder width, lower to chest and press up explosively.',
+    videoUrl: 'https://www.youtube.com/watch?v=vcBig73ojpE',
+    tags: ['chest', 'compound', 'pushing'], muscleGroup: 'Pectorals', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-002', name: 'Incline Dumbbell Press', category: 'chest',
+    description: 'Set bench to 30–45°, press dumbbells from chest level to full extension targeting upper chest.',
+    videoUrl: 'https://www.youtube.com/watch?v=8iPEnn-ltC8',
+    tags: ['chest', 'upper chest', 'compound'], muscleGroup: 'Upper Pectorals', equipment: 'dumbbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-003', name: 'Push-Up', category: 'chest',
+    description: 'Hands shoulder-width apart, lower chest to floor and push back up, keeping body straight.',
+    videoUrl: 'https://www.youtube.com/watch?v=IODxDxX7oi4',
+    tags: ['chest', 'bodyweight', 'compound'], muscleGroup: 'Pectorals', equipment: 'bodyweight',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-004', name: 'Cable Chest Fly', category: 'chest',
+    description: 'Stand between cables set at mid height, bring hands together in an arc at chest height, squeeze at centre.',
+    videoUrl: 'https://www.youtube.com/watch?v=Iwe6AmxVf7o',
+    tags: ['chest', 'isolation', 'cable'],
+    muscleGroup: 'Pectorals', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-005', name: 'Dips (Chest Focus)', category: 'chest',
+    description: 'Lean forward slightly on parallel bars, lower until elbows reach 90°, push back up.',
+    videoUrl: 'https://www.youtube.com/watch?v=2z8JmcrW-As',
+    tags: ['chest', 'triceps', 'compound', 'bodyweight'],
+    muscleGroup: 'Lower Pectorals', equipment: 'bodyweight',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-006', name: 'Dumbbell Flat Bench Press', category: 'chest',
+    description: 'Press dumbbells from chest height to full extension on a flat bench, greater range than barbell.',
+    videoUrl: 'https://www.youtube.com/watch?v=VmB1G1K7v94',
+    tags: ['chest', 'compound', 'dumbbell'],
+    muscleGroup: 'Pectorals', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-007', name: 'Pec Deck Machine', category: 'chest',
+    description: 'Sit at machine, bring arms together in front of chest in a controlled arc.',
+    videoUrl: 'https://www.youtube.com/watch?v=Z57CtFmRMxA',
+    tags: ['chest', 'isolation', 'machine'],
+    muscleGroup: 'Pectorals', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-008', name: 'Decline Barbell Press', category: 'chest',
+    description: 'Set bench to −15°, press bar to lower chest, targets lower pec fibres.',
+    videoUrl: '',
+    tags: ['chest', 'lower chest', 'compound'],
+    muscleGroup: 'Lower Pectorals', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-009', name: 'High-to-Low Cable Fly', category: 'chest',
+    description: 'Set cables high, bring hands down and together in front of hips — targets lower pec fibres.',
+    videoUrl: 'https://www.youtube.com/watch?v=hhruLxo9yZU',
+    tags: ['chest', 'lower chest', 'isolation', 'cable'],
+    muscleGroup: 'Lower Pectorals', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-010', name: 'Low-to-High Cable Fly', category: 'chest',
+    description: 'Set cables low, bring hands upward and together at chin height — targets upper pec fibres.',
+    videoUrl: '',
+    tags: ['chest', 'upper chest', 'isolation', 'cable'],
+    muscleGroup: 'Upper Pectorals', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-011', name: 'Chest Press Machine', category: 'chest',
+    description: 'Sit with back flat against pad, press handles forward until arms are extended, return under control.',
+    videoUrl: '',
+    tags: ['chest', 'compound', 'machine'],
+    muscleGroup: 'Pectorals', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-chest-012', name: 'Smith Machine Bench Press', category: 'chest',
+    description: 'Use Smith machine for a guided bench press — good for safety when training alone.',
+    videoUrl: '',
+    tags: ['chest', 'compound', 'machine'],
+    muscleGroup: 'Pectorals', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── BACK ───────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-back-001', name: 'Pull-Up', category: 'back',
+    description: 'Hang from bar with overhand grip, pull chest to bar keeping core tight, lower under control.',
+    videoUrl: 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
+    tags: ['back', 'lats', 'compound', 'bodyweight'], muscleGroup: 'Latissimus Dorsi', equipment: 'bodyweight',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-002', name: 'Barbell Bent-Over Row', category: 'back',
+    description: 'Hinge at hips, pull bar to lower ribcage squeezing shoulder blades, keep back flat.',
+    videoUrl: 'https://www.youtube.com/watch?v=FWJR5Ve8bnQ',
+    tags: ['back', 'compound', 'rowing'], muscleGroup: 'Latissimus Dorsi', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-003', name: 'Lat Pulldown', category: 'back',
+    description: 'Grip bar wide, pull to upper chest keeping chest tall, elbows drive down and back.',
+    videoUrl: 'https://www.youtube.com/watch?v=CAwf7n6Luuc',
+    tags: ['back', 'lats', 'cable'], muscleGroup: 'Latissimus Dorsi', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-004', name: 'Seated Cable Row', category: 'back',
+    description: 'Pull handle to lower abdomen, squeeze shoulder blades at end, return under control.',
+    videoUrl: 'https://www.youtube.com/watch?v=GZbfZ033f74',
+    tags: ['back', 'rowing', 'cable'],
+    muscleGroup: 'Rhomboids', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-005', name: 'Face Pull', category: 'back',
+    description: 'Pull rope attachment toward face with elbows high and wide, externally rotate at end.',
+    videoUrl: 'https://www.youtube.com/watch?v=rep-qVOkqgk',
+    tags: ['back', 'shoulders', 'rear delt', 'cable'], muscleGroup: 'Rear Deltoids', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-006', name: 'Single-Arm Dumbbell Row', category: 'back',
+    description: 'Brace one hand on bench, row dumbbell to hip, elbow close to body.',
+    videoUrl: 'https://www.youtube.com/watch?v=roCP6wCXPqo',
+    tags: ['back', 'rowing', 'unilateral'],
+    muscleGroup: 'Latissimus Dorsi', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-007', name: 'T-Bar Row', category: 'back',
+    description: 'Straddle bar, grip attachment, row to chest keeping back flat and knees soft.',
+    videoUrl: 'https://www.youtube.com/watch?v=hYo72r8Ivso',
+    tags: ['back', 'compound', 'rowing'],
+    muscleGroup: 'Mid Back', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-008', name: 'Straight-Arm Pulldown', category: 'back',
+    description: 'Keep arms straight, pull bar from overhead to hips in an arc, isolates lats.',
+    videoUrl: 'https://www.youtube.com/watch?v=ey9Fv3FGrRg',
+    tags: ['back', 'lats', 'isolation', 'cable'],
+    muscleGroup: 'Latissimus Dorsi', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-009', name: 'Close-Grip Lat Pulldown', category: 'back',
+    description: 'Use V-bar attachment, pull to upper chest with elbows driving straight down, targets lower lats.',
+    videoUrl: '',
+    tags: ['back', 'lats', 'cable'],
+    muscleGroup: 'Latissimus Dorsi', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-010', name: 'Cable Pull-Over', category: 'back',
+    description: 'Face away from high cable, pull bar overhead and down to hips in a sweeping arc.',
+    videoUrl: '',
+    tags: ['back', 'lats', 'isolation', 'cable'],
+    muscleGroup: 'Latissimus Dorsi', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-011', name: 'Machine Chest-Supported Row', category: 'back',
+    description: 'Lie chest-down on incline pad, row handles toward chest — removes lower back from the equation.',
+    videoUrl: '',
+    tags: ['back', 'rowing', 'machine'],
+    muscleGroup: 'Rhomboids', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-back-012', name: 'Reverse-Grip Lat Pulldown', category: 'back',
+    description: 'Use underhand shoulder-width grip, pull bar to upper chest — emphasises lower lats and biceps.',
+    videoUrl: '',
+    tags: ['back', 'lats', 'biceps', 'cable'],
+    muscleGroup: 'Latissimus Dorsi', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── SHOULDERS ──────────────────────────────────────────────────────────────
+  {
+    id: 'gym-sh-001', name: 'Barbell Overhead Press', category: 'shoulders',
+    description: 'Press barbell from shoulder height to full overhead extension, core braced throughout.',
+    videoUrl: 'https://www.youtube.com/watch?v=2yjwXTZQDDI',
+    tags: ['shoulders', 'compound', 'pressing'], muscleGroup: 'Deltoids', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-sh-002', name: 'Dumbbell Lateral Raise', category: 'shoulders',
+    description: 'Raise dumbbells to the side until parallel with floor, slight bend in elbows.',
+    videoUrl: 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
+    tags: ['shoulders', 'side delt', 'isolation'], muscleGroup: 'Lateral Deltoids', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-sh-003', name: 'Arnold Press', category: 'shoulders',
+    description: 'Start with palms facing you at chin height, rotate palms outward as you press overhead.',
+    videoUrl: 'https://www.youtube.com/watch?v=6Z15_WdXmVw',
+    tags: ['shoulders', 'compound', 'dumbbell'],
+    muscleGroup: 'Deltoids', equipment: 'dumbbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-sh-004', name: 'Rear Delt Dumbbell Fly', category: 'shoulders',
+    description: 'Hinge forward 45°, raise dumbbells to the side with a slight elbow bend.',
+    videoUrl: 'https://www.youtube.com/watch?v=nlkF7_2O_Lw',
+    tags: ['shoulders', 'rear delt', 'isolation'],
+    muscleGroup: 'Posterior Deltoids', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-sh-005', name: 'Cable Lateral Raise', category: 'shoulders',
+    description: 'Set cable low, raise arm across body to shoulder height in a controlled arc.',
+    videoUrl: '',
+    tags: ['shoulders', 'side delt', 'isolation', 'cable'],
+    muscleGroup: 'Lateral Deltoids', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-sh-006', name: 'Dumbbell Front Raise', category: 'shoulders',
+    description: 'Raise dumbbells forward to shoulder height with slight elbow bend, lower under control.',
+    videoUrl: '',
+    tags: ['shoulders', 'front delt', 'isolation'],
+    muscleGroup: 'Anterior Deltoids', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── BICEPS ─────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-bi-001', name: 'Barbell Curl', category: 'biceps',
+    description: 'Curl bar from arms fully extended to shoulder height, keep elbows pinned at sides.',
+    videoUrl: 'https://www.youtube.com/watch?v=kwG2ipFRgfo',
+    tags: ['biceps', 'isolation'], muscleGroup: 'Biceps Brachii', equipment: 'barbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-bi-002', name: 'Dumbbell Hammer Curl', category: 'biceps',
+    description: 'Curl with neutral grip (thumbs up), targets brachialis and brachioradialis for arm thickness.',
+    videoUrl: 'https://www.youtube.com/watch?v=TwD-YGVP4Bk',
+    tags: ['biceps', 'forearms', 'isolation'],
+    muscleGroup: 'Brachialis', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-bi-003', name: 'Incline Dumbbell Curl', category: 'biceps',
+    description: 'Set bench to 45°, arms hang back, curl for a full stretch on the long head.',
+    videoUrl: 'https://www.youtube.com/watch?v=soxrZlIl35U',
+    tags: ['biceps', 'isolation', 'stretch'],
+    muscleGroup: 'Biceps Brachii', equipment: 'dumbbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-bi-004', name: 'Cable Curl', category: 'biceps',
+    description: 'Curl cable bar from hip height to chin, constant tension throughout the movement.',
+    videoUrl: '',
+    tags: ['biceps', 'isolation', 'cable'],
+    muscleGroup: 'Biceps Brachii', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-bi-005', name: 'Concentration Curl', category: 'biceps',
+    description: 'Seated, brace elbow on inner thigh, curl dumbbell up with full supination at top.',
+    videoUrl: 'https://www.youtube.com/watch?v=llD6MImgqe8',
+    tags: ['biceps', 'isolation', 'peak'],
+    muscleGroup: 'Biceps Brachii', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-bi-006', name: 'EZ Bar Preacher Curl', category: 'biceps',
+    description: 'Rest upper arms on preacher pad, curl EZ bar up, lower under control for full stretch.',
+    videoUrl: 'https://www.youtube.com/watch?v=fIWP-FRFNU0',
+    tags: ['biceps', 'isolation', 'preacher'],
+    muscleGroup: 'Biceps Brachii', equipment: 'ez_bar',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── TRICEPS ────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-tri-001', name: 'Tricep Rope Pushdown', category: 'triceps',
+    description: 'Pull rope down until arms fully extended, flare ends apart at bottom to maximise contraction.',
+    videoUrl: 'https://www.youtube.com/watch?v=vB5OHsJ3EME',
+    tags: ['triceps', 'isolation', 'cable'], muscleGroup: 'Triceps Brachii', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-tri-002', name: 'Skull Crusher', category: 'triceps',
+    description: 'Lie on bench, lower EZ-bar to forehead keeping elbows pointing up, extend back to start.',
+    videoUrl: 'https://www.youtube.com/watch?v=kOXVmFFTcio',
+    tags: ['triceps', 'isolation'],
+    muscleGroup: 'Triceps Brachii', equipment: 'ez_bar',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-tri-003', name: 'Overhead Tricep Extension', category: 'triceps',
+    description: 'Hold dumbbell overhead with both hands, lower behind head, extend back up for long head stretch.',
+    videoUrl: 'https://www.youtube.com/watch?v=YbX7Wd8jQ-U',
+    tags: ['triceps', 'isolation', 'long head'],
+    muscleGroup: 'Triceps Brachii (Long Head)', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-tri-004', name: 'Close-Grip Bench Press', category: 'triceps',
+    description: 'Grip bar shoulder-width, lower to lower chest, press up focusing on tricep extension.',
+    videoUrl: 'https://www.youtube.com/watch?v=nEF0bv2FW54',
+    tags: ['triceps', 'compound', 'pressing'],
+    muscleGroup: 'Triceps Brachii', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-tri-005', name: 'Tricep Kickback', category: 'triceps',
+    description: 'Hinge forward, upper arm parallel to floor, extend forearm back until arm is straight.',
+    videoUrl: '',
+    tags: ['triceps', 'isolation'],
+    muscleGroup: 'Triceps Brachii', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-tri-006', name: 'Diamond Push-Up', category: 'triceps',
+    description: 'Form diamond shape with hands under chest, lower and push up, elbows close to body.',
+    videoUrl: '',
+    tags: ['triceps', 'bodyweight', 'compound'],
+    muscleGroup: 'Triceps Brachii', equipment: 'bodyweight',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── LEGS ───────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-leg-001', name: 'Barbell Back Squat', category: 'legs',
+    description: 'Bar across upper back, squat until thighs parallel to floor, drive through heels to stand.',
+    videoUrl: 'https://www.youtube.com/watch?v=Dy28eq2PjcM',
+    tags: ['legs', 'quads', 'compound', 'glutes'], muscleGroup: 'Quadriceps', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-002', name: 'Romanian Deadlift', category: 'legs',
+    description: 'Hinge at hips with soft knees, lower bar along legs until hamstring stretch, drive hips forward.',
+    videoUrl: 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
+    tags: ['legs', 'hamstrings', 'compound', 'glutes'], muscleGroup: 'Hamstrings', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-003', name: 'Leg Press', category: 'legs',
+    description: 'Push platform away until legs nearly straight, lower under full control.',
+    videoUrl: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ',
+    tags: ['legs', 'quads', 'compound'],
+    muscleGroup: 'Quadriceps', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-004', name: 'Leg Curl (Machine)', category: 'legs',
+    description: 'Lying face down, curl heels toward glutes against resistance, lower under control.',
+    videoUrl: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs',
+    tags: ['legs', 'hamstrings', 'isolation'],
+    muscleGroup: 'Hamstrings', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-005', name: 'Bulgarian Split Squat', category: 'legs',
+    description: 'Rear foot elevated on bench, lower front knee toward floor, drive back up through heel.',
+    videoUrl: 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
+    tags: ['legs', 'quads', 'unilateral'],
+    muscleGroup: 'Quadriceps', equipment: 'dumbbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-006', name: 'Goblet Squat', category: 'legs',
+    description: 'Hold dumbbell at chest, squat deep with elbows between knees, great for beginners.',
+    videoUrl: 'https://www.youtube.com/watch?v=MxsFDhcyFyE',
+    tags: ['legs', 'quads', 'compound'],
+    muscleGroup: 'Quadriceps', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-007', name: 'Walking Lunge', category: 'legs',
+    description: 'Step forward into a lunge, alternate legs while walking, keep torso upright.',
+    videoUrl: 'https://www.youtube.com/watch?v=L8fvypPrzzs',
+    tags: ['legs', 'quads', 'unilateral', 'balance'],
+    muscleGroup: 'Quadriceps', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-008', name: 'Leg Extension (Machine)', category: 'legs',
+    description: 'Extend legs against resistance until straight, lower under control, isolates quads.',
+    videoUrl: 'https://www.youtube.com/watch?v=YyvSfVjQeL0',
+    tags: ['legs', 'quads', 'isolation'],
+    muscleGroup: 'Quadriceps', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-leg-009', name: 'Standing Calf Raise', category: 'legs',
+    description: 'Rise onto toes holding dumbbells or at calf raise machine, lower heel below platform.',
+    videoUrl: '',
+    tags: ['legs', 'calves', 'isolation'],
+    muscleGroup: 'Gastrocnemius', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── GLUTES ─────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-glt-001', name: 'Barbell Hip Thrust', category: 'glutes',
+    description: 'Shoulders on bench, bar across hips, drive hips up until body is parallel to floor.',
+    videoUrl: 'https://www.youtube.com/watch?v=SEdqd1n0cvg',
+    tags: ['glutes', 'compound', 'hip extension'], muscleGroup: 'Gluteus Maximus', equipment: 'barbell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-glt-002', name: 'Cable Kickback', category: 'glutes',
+    description: 'Attach ankle strap, hinge forward slightly, kick leg straight back squeezing the glute.',
+    videoUrl: '',
+    tags: ['glutes', 'isolation', 'cable'],
+    muscleGroup: 'Gluteus Maximus', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-glt-003', name: 'Sumo Squat', category: 'glutes',
+    description: 'Wide stance, toes pointed out, squat deep while keeping chest tall to emphasise glutes.',
+    videoUrl: '',
+    tags: ['glutes', 'inner thighs', 'compound'],
+    muscleGroup: 'Gluteus Medius', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-glt-004', name: 'Glute Bridge', category: 'glutes',
+    description: 'Lie on back, feet flat, drive hips up squeezing glutes, hold at top for 1–2 seconds.',
+    videoUrl: 'https://www.youtube.com/watch?v=wPM8icPu6H8',
+    tags: ['glutes', 'bodyweight', 'hip extension'],
+    muscleGroup: 'Gluteus Maximus', equipment: 'bodyweight',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-glt-005', name: 'Single-Leg Hip Thrust', category: 'glutes',
+    description: 'Same as hip thrust but one leg extended, maximises glute loading on working side.',
+    videoUrl: '',
+    tags: ['glutes', 'unilateral', 'hip extension'],
+    muscleGroup: 'Gluteus Maximus', equipment: 'bodyweight',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-glt-006', name: 'Lateral Band Walk', category: 'glutes',
+    description: 'Place band above knees, squat slightly, step side to side maintaining tension.',
+    videoUrl: '',
+    tags: ['glutes', 'abductors', 'resistance band'],
+    muscleGroup: 'Gluteus Medius', equipment: 'resistance_band',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── CORE ───────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-core-001', name: 'Plank', category: 'core',
+    description: 'Hold push-up position on forearms, body in straight line, breathe steadily throughout.',
+    videoUrl: 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
+    tags: ['core', 'isometric', 'bodyweight'],
+    muscleGroup: 'Transverse Abdominis', equipment: 'bodyweight',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-002', name: 'Cable Crunch', category: 'core',
+    description: 'Kneel facing cable, pull rope toward floor crunching abs hard, keep hips stationary.',
+    videoUrl: 'https://www.youtube.com/watch?v=_FBhzFhiFhQ',
+    tags: ['core', 'abs', 'cable'],
+    muscleGroup: 'Rectus Abdominis', equipment: 'cable',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-003', name: 'Hanging Leg Raise', category: 'core',
+    description: 'Hang from pull-up bar, raise straight legs to 90° or higher, lower under control.',
+    videoUrl: 'https://www.youtube.com/watch?v=Pr1ieGZ5atk',
+    tags: ['core', 'abs', 'hip flexors'],
+    muscleGroup: 'Rectus Abdominis', equipment: 'bodyweight',
+    progressionLevel: 'advanced', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-004', name: 'Russian Twist', category: 'core',
+    description: 'Sit with feet elevated, rotate torso side to side holding a weight plate or dumbbell.',
+    videoUrl: 'https://www.youtube.com/watch?v=JyyvI6dJDME',
+    tags: ['core', 'obliques', 'rotation'],
+    muscleGroup: 'Obliques', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-005', name: 'Ab Wheel Rollout', category: 'core',
+    description: 'Kneel holding ab wheel, roll forward until arms are extended, pull back using core.',
+    videoUrl: 'https://www.youtube.com/watch?v=IVTeRSkWZBM',
+    tags: ['core', 'abs', 'anti-extension'],
+    muscleGroup: 'Rectus Abdominis', equipment: 'other',
+    progressionLevel: 'advanced', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-006', name: 'Side Plank', category: 'core',
+    description: 'Hold side-lying position on one forearm and foot, body straight, hips off the floor.',
+    videoUrl: '',
+    tags: ['core', 'obliques', 'isometric'],
+    muscleGroup: 'Obliques', equipment: 'bodyweight',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-core-007', name: 'Dead Bug', category: 'core',
+    description: 'Lie on back, extend opposite arm and leg simultaneously keeping lower back pressed to floor.',
+    videoUrl: '',
+    tags: ['core', 'anti-rotation', 'stability'],
+    muscleGroup: 'Transverse Abdominis', equipment: 'bodyweight',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── CARDIO ─────────────────────────────────────────────────────────────────
+  {
+    id: 'gym-cardio-001', name: 'Treadmill Run', category: 'cardio',
+    description: 'Maintain consistent pace on treadmill; adjust speed and incline to target heart rate.',
+    videoUrl: '', tags: ['cardio', 'endurance', 'running'],
+    muscleGroup: 'Full Body', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-cardio-002', name: 'Rowing Machine', category: 'cardio',
+    description: 'Drive with legs first, then lean back and pull handle to lower ribs, return in reverse order.',
+    videoUrl: '', tags: ['cardio', 'full body', 'endurance'],
+    muscleGroup: 'Full Body', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-cardio-003', name: 'Jump Rope', category: 'cardio',
+    description: 'Skip rope at consistent rhythm; progress to double-unders for higher intensity.',
+    videoUrl: '', tags: ['cardio', 'coordination', 'endurance'],
+    muscleGroup: 'Full Body', equipment: 'other',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-cardio-004', name: 'Stationary Bike', category: 'cardio',
+    description: 'Pedal at target cadence and resistance; use interval protocols for conditioning.',
+    videoUrl: '', tags: ['cardio', 'low impact', 'endurance'],
+    muscleGroup: 'Legs', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-cardio-005', name: 'Stair Climber', category: 'cardio',
+    description: 'Step at steady pace on stair machine; avoid leaning on handles for best effort.',
+    videoUrl: '', tags: ['cardio', 'legs', 'glutes', 'endurance'],
+    muscleGroup: 'Legs & Glutes', equipment: 'machine',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-cardio-006', name: 'Battle Ropes', category: 'cardio',
+    description: 'Alternate or simultaneous waves with heavy ropes for high-intensity conditioning.',
+    videoUrl: '', tags: ['cardio', 'upper body', 'HIIT'],
+    muscleGroup: 'Shoulders & Core', equipment: 'other',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+
+  // ── FULL BODY ──────────────────────────────────────────────────────────────
+  {
+    id: 'gym-fb-001', name: 'Deadlift', category: 'full_body',
+    description: 'Push floor away with legs, hinge hips forward, bar stays close to body throughout.',
+    videoUrl: 'https://www.youtube.com/watch?v=op9kVnSso6Q',
+    tags: ['full body', 'compound', 'back', 'legs'], muscleGroup: 'Posterior Chain', equipment: 'barbell',
+    progressionLevel: 'advanced', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-fb-002', name: 'Kettlebell Swing', category: 'full_body',
+    description: 'Hike kettlebell back, drive hips explosively forward, swing to chest height.',
+    videoUrl: 'https://www.youtube.com/watch?v=YSxHifyI6s8',
+    tags: ['full body', 'cardio', 'power', 'glutes'], muscleGroup: 'Posterior Chain', equipment: 'kettlebell',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-fb-003', name: 'Farmer\'s Walk', category: 'full_body',
+    description: 'Hold heavy dumbbells at sides, walk with tall posture and controlled steps.',
+    videoUrl: 'https://www.youtube.com/watch?v=rt17lmnaLSM',
+    tags: ['full body', 'grip', 'carry', 'core'],
+    muscleGroup: 'Full Body', equipment: 'dumbbell',
+    progressionLevel: 'beginner', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-fb-004', name: 'Burpee', category: 'full_body',
+    description: 'Squat down, jump feet back to push-up, perform push-up, jump feet forward, jump up.',
+    videoUrl: 'https://www.youtube.com/watch?v=auBLPXO8Fww',
+    tags: ['full body', 'cardio', 'bodyweight', 'HIIT'],
+    muscleGroup: 'Full Body', equipment: 'bodyweight',
+    progressionLevel: 'intermediate', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-fb-005', name: 'Power Clean', category: 'full_body',
+    description: 'Pull bar from floor explosively, drop under and catch in front rack position.',
+    videoUrl: 'https://www.youtube.com/watch?v=RFLU0OuSHkE',
+    tags: ['full body', 'power', 'olympic', 'explosive'],
+    muscleGroup: 'Full Body', equipment: 'barbell',
+    progressionLevel: 'advanced', createdAt: new Date().toISOString(), isCustom: false,
+  },
+  {
+    id: 'gym-fb-006', name: 'Turkish Get-Up', category: 'full_body',
+    description: 'Start lying holding kettlebell overhead, stand up through a series of controlled steps.',
+    videoUrl: 'https://www.youtube.com/watch?v=0bWRPC49-KI',
+    tags: ['full body', 'stability', 'mobility', 'shoulder'],
+    muscleGroup: 'Full Body', equipment: 'kettlebell',
+    progressionLevel: 'advanced', createdAt: new Date().toISOString(), isCustom: false,
+  },
+];
 
 export { SEED_EXERCISES, SEED_TEMPLATES };

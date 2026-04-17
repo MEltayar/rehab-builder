@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useToastStore } from '../../../store/toastStore';
+import { usePlanStore } from '../../../store/planStore';
+import { Lock } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { Calendar, Clock, User, Target, Layers, BookTemplate } from 'lucide-react';
+import { Calendar, Clock, User, Target, Layers, BookTemplate, ChevronLeft } from 'lucide-react';
 import ExportDropdown from '../../pdf/components/ExportDropdown';
 import SendPanel from '../../pdf/components/SendPanel';
 import SaveAsTemplateModal from '../../templates/components/SaveAsTemplateModal';
@@ -64,6 +66,9 @@ export default function ProgramPreviewPage() {
 
   const showToast = useToastStore((s) => s.showToast);
 
+  const limits = usePlanStore((s) => s.limits());
+  const canSaveTemplate = limits.canSaveTemplate;
+
   const [exportingPDF, setExportingPDF]     = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
@@ -100,8 +105,8 @@ export default function ProgramPreviewPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
         <p className="text-gray-700 dark:text-gray-300 font-medium">Program not found</p>
-        <Link to="/programs" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-          ← Back to Programs
+        <Link to="/programs" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors shadow-sm">
+          <ChevronLeft size={15} /> Back to Programs
         </Link>
       </div>
     );
@@ -193,28 +198,42 @@ export default function ProgramPreviewPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           to={`/programs/${id}/edit`}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors shadow-sm"
         >
-          ← Back to Edit
+          <ChevronLeft size={15} /> Back to Edit
         </Link>
 
         <div className="flex flex-wrap gap-2">
           {/* Save as Template button */}
-          <button
-            onClick={() => setSaveAsTemplateOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-          >
-            <BookTemplate size={15} />
-            <span className="hidden sm:inline">Save as Template</span>
-            <span className="sm:hidden">Template</span>
-          </button>
+          {canSaveTemplate ? (
+            <button
+              onClick={() => setSaveAsTemplateOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+            >
+              <BookTemplate size={15} />
+              <span className="hidden sm:inline">Save as Template</span>
+              <span className="sm:hidden">Template</span>
+            </button>
+          ) : (
+            <a
+              href="/pricing"
+              title="Upgrade to Pro to save templates"
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-600 border border-gray-200 dark:border-gray-700 shadow-sm"
+            >
+              <Lock size={13} />
+              <span className="hidden sm:inline">Save as Template</span>
+              <span className="sm:hidden">Template</span>
+            </a>
+          )}
 
+          {/* Export / Send — always shown; ExportDropdown handles per-item locks */}
           <ExportDropdown
             onSelectPDF={handleExportPDF}
             onSelectExcel={handleExportExcel}
             onSelectEmail={() => setSelectedSendOption('email')}
             onSelectWhatsApp={() => setSelectedSendOption('whatsapp')}
             disabled={exportingPDF || exportingExcel || isSending || totalExercises === 0}
+            loading={exportingPDF || exportingExcel || isSending}
           />
         </div>
       </div>
@@ -423,14 +442,22 @@ export default function ProgramPreviewPage() {
 
                     {/* Desktop table */}
                     <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm table-fixed">
+                        <colgroup>
+                          <col className="w-[38%]" />
+                          <col className="w-[8%]" />
+                          <col className="w-[8%]" />
+                          <col className="w-[10%]" />
+                          <col className="w-[10%]" />
+                          <col className="w-[26%]" />
+                        </colgroup>
                         <thead>
                           <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
                             <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Exercise</th>
-                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">Sets</th>
-                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-16">Reps</th>
-                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">Hold (s)</th>
-                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide w-20">Rest (s)</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sets</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Reps</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hold (s)</th>
+                            <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Rest (s)</th>
                             <th className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Notes</th>
                           </tr>
                         </thead>
@@ -442,7 +469,7 @@ export default function ProgramPreviewPage() {
                                 ei % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/60 dark:bg-gray-900/30'
                               }`}
                             >
-                              <td className="px-5 py-3 font-semibold text-gray-900 dark:text-gray-100">
+                              <td className="px-5 py-3 font-semibold text-gray-900 dark:text-gray-100 truncate">
                                 {exerciseMap.get(pe.exerciseId) ?? 'Unknown exercise'}
                               </td>
                               <td className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">
