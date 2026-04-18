@@ -1,28 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import NotFoundPage from './components/layout/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import OnboardingPage from './pages/OnboardingPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import PricingPage from './pages/PricingPage';
-import DashboardPage from './features/dashboard/pages/DashboardPage';
-import ExercisesPage from './features/exercises/pages/ExercisesPage';
-import ClientsPage from './features/clients/pages/ClientsPage';
-import ClientProfilePage from './features/clients/pages/ClientProfilePage';
-import ProgramsPage from './features/programs/pages/ProgramsPage';
-import ProgramBuilderPage from './features/programs/pages/ProgramBuilderPage';
-import ProgramPreviewPage from './features/programs/pages/ProgramPreviewPage';
-import TemplatesPage from './features/templates/pages/TemplatesPage';
-import TemplateEditorPage from './features/templates/pages/TemplateEditorPage';
-import ConfigPage from './features/config/pages/ConfigPage';
-import HelpPage from './features/help/pages/HelpPage';
-import AdminPage from './features/admin/pages/AdminPage';
-import FoodLibraryPage from './features/diet/pages/FoodLibraryPage';
-import DietPlansPage from './features/diet/pages/DietPlansPage';
-import DietPlanBuilderPage from './features/diet/pages/DietPlanBuilderPage';
 import { useAuthStore } from './store/authStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useTemplateStore } from './store/templateStore';
@@ -30,8 +10,28 @@ import { usePlanStore } from './store/planStore';
 import { useUserStore } from './store/userStore';
 import { useClientStore } from './store/clientStore';
 import { useProgramStore } from './store/programStore';
-import { seedDatabase } from './db/seed';
 import ErrorBoundary from './components/ErrorBoundary';
+
+const LoginPage           = lazy(() => import('./pages/LoginPage'));
+const SignupPage          = lazy(() => import('./pages/SignupPage'));
+const OnboardingPage      = lazy(() => import('./pages/OnboardingPage'));
+const ResetPasswordPage   = lazy(() => import('./pages/ResetPasswordPage'));
+const PricingPage         = lazy(() => import('./pages/PricingPage'));
+const DashboardPage       = lazy(() => import('./features/dashboard/pages/DashboardPage'));
+const ExercisesPage       = lazy(() => import('./features/exercises/pages/ExercisesPage'));
+const ClientsPage         = lazy(() => import('./features/clients/pages/ClientsPage'));
+const ClientProfilePage   = lazy(() => import('./features/clients/pages/ClientProfilePage'));
+const ProgramsPage        = lazy(() => import('./features/programs/pages/ProgramsPage'));
+const ProgramBuilderPage  = lazy(() => import('./features/programs/pages/ProgramBuilderPage'));
+const ProgramPreviewPage  = lazy(() => import('./features/programs/pages/ProgramPreviewPage'));
+const TemplatesPage       = lazy(() => import('./features/templates/pages/TemplatesPage'));
+const TemplateEditorPage  = lazy(() => import('./features/templates/pages/TemplateEditorPage'));
+const ConfigPage          = lazy(() => import('./features/config/pages/ConfigPage'));
+const HelpPage            = lazy(() => import('./features/help/pages/HelpPage'));
+const AdminPage           = lazy(() => import('./features/admin/pages/AdminPage'));
+const FoodLibraryPage     = lazy(() => import('./features/diet/pages/FoodLibraryPage'));
+const DietPlansPage       = lazy(() => import('./features/diet/pages/DietPlansPage'));
+const DietPlanBuilderPage = lazy(() => import('./features/diet/pages/DietPlanBuilderPage'));
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -96,23 +96,39 @@ export default function App() {
     resetSettings();
   }, [user, resetUser, resetPlan, resetSettings]);
 
-  // Initialize all stores + seed as soon as the user is known — all in parallel
-  // so the dashboard has its data ready by the time the gate opens.
+  // Critical stores first (needed by ProtectedRoute + layout)
   useEffect(() => {
     if (!user) return;
     initializeSettings();
-    initializeTemplates();
     initializeUser();
     fetchSubscription();
-    initializeClients();
-    initializePrograms();
-    seedDatabase().catch((err) => console.error('[seed] Failed:', err));
-  }, [user, initializeSettings, initializeTemplates, initializeUser, fetchSubscription,
-      initializeClients, initializePrograms]);
+  }, [user, initializeSettings, initializeUser, fetchSubscription]);
+
+  // Secondary stores + seed deferred so they don't block first paint.
+  // seedDatabase is lazy-imported so the huge (1700+ line) seed data
+  // chunk is never shipped in the main bundle.
+  useEffect(() => {
+    if (!user) return;
+    const id = setTimeout(() => {
+      initializeTemplates();
+      initializeClients();
+      initializePrograms();
+      import('./db/seed').then(({ seedDatabase }) =>
+        seedDatabase().catch((err) => console.error('[seed] Failed:', err))
+      );
+    }, 0);
+    return () => clearTimeout(id);
+  }, [user, initializeTemplates, initializeClients, initializePrograms]);
 
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} />
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-950">
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <RouterProvider router={router} />
+      </Suspense>
     </ErrorBoundary>
   );
 }

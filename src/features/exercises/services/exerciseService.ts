@@ -1,14 +1,17 @@
 import { supabase } from '../../../lib/supabase';
-import { SEED_EXERCISES, GYM_SEED_EXERCISES } from '../../../db/seed';
 import { dbRowToExercise, exerciseToDbRow } from '../../../lib/mappers';
 import { useUserStore } from '../../../store/userStore';
 import type { Exercise } from '../../../types';
+
+// Seed data is dynamic-imported inside seeding functions only, so its
+// ~1700-line payload never ships in the main/page bundles.
 
 export async function seedIfEmpty(): Promise<void> {
   const { count } = await supabase
     .from('exercises')
     .select('*', { count: 'exact', head: true });
   if ((count ?? 0) === 0) {
+    const { SEED_EXERCISES } = await import('../../../db/seed');
     const rows = SEED_EXERCISES.map(exerciseToDbRow);
     for (let i = 0; i < rows.length; i += 100) {
       const { error } = await supabase.from('exercises').insert(rows.slice(i, i + 100));
@@ -27,6 +30,7 @@ export async function seedGymExercisesIfMissing(): Promise<void> {
   if (localStorage.getItem(GYM_SEED_KEY) === GYM_SEED_VERSION) return;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
+  const { GYM_SEED_EXERCISES } = await import('../../../db/seed');
   // Upsert by id — adds new exercises, skips ones that already exist.
   // Explicitly set user_id so RLS with check passes; ignoreDuplicates skips
   // rows that already exist from another user's seed run.
@@ -42,6 +46,7 @@ export async function seedGymExercisesIfMissing(): Promise<void> {
 
 export async function syncGymExerciseVideos(): Promise<void> {
   if (localStorage.getItem(GYM_VIDEO_KEY) === GYM_SEED_VERSION) return;
+  const { GYM_SEED_EXERCISES } = await import('../../../db/seed');
   const withVideo = GYM_SEED_EXERCISES.filter((ex) => ex.videoUrl);
   await Promise.all(
     withVideo.map((ex) =>
