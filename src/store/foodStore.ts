@@ -73,11 +73,11 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
       };
       const { error } = await supabase.from('food_items').insert(foodItemToDbRow(copy));
       if (error) throw error;
-      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
-      await useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds });
       set((state) => ({
         foods: state.foods.filter((f) => f.id !== id).concat(copy),
       }));
+      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
+      useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds }).catch(() => {});
       return;
     }
 
@@ -98,10 +98,10 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
     const isAdmin = useUserStore.getState().canAccessAdmin();
 
     if (!food.isCustom && !isAdmin) {
-      // Normal user deleting built-in: hide for this user only
-      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
-      await useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds });
+      // Normal user deleting built-in: remove from local state immediately, persist hidden list in background
       set((state) => ({ foods: state.foods.filter((f) => f.id !== id) }));
+      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
+      useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds }).catch(() => {});
       return;
     }
 

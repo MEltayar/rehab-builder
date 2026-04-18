@@ -83,11 +83,11 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
       };
       const { error } = await supabase.from('exercises').insert(exerciseToDbRow(copy));
       if (error) throw error;
-      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
-      await useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds });
       set((state) => ({
         exercises: state.exercises.filter((ex) => ex.id !== id).concat(copy),
       }));
+      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
+      useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds }).catch(() => {});
       return;
     }
 
@@ -108,20 +108,16 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     const isAdmin = useUserStore.getState().canAccessAdmin();
 
     if (!exercise.isCustom && !isAdmin) {
-      // Normal user deleting built-in: hide for this user only
-      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
-      await useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds });
+      // Normal user deleting built-in: remove from local state immediately, persist hidden list in background
       set((state) => ({ exercises: state.exercises.filter((ex) => ex.id !== id) }));
+      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
+      useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds }).catch(() => {});
       return;
     }
 
     // Admin/Staff or deleting own custom: remove from DB
-    const { error, count } = await supabase
-      .from('exercises')
-      .delete({ count: 'exact' })
-      .eq('id', id);
+    const { error } = await supabase.from('exercises').delete().eq('id', id);
     if (error) throw error;
-    if (count === 0) throw new Error('Exercise could not be deleted. You may not have permission.');
     set((state) => ({
       exercises: state.exercises.filter((ex) => ex.id !== id),
     }));
