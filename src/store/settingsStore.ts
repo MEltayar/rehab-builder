@@ -144,6 +144,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   initializeFromDB: async () => {
     if (get().isLoaded) return;
 
+    // Validate session before any DB call — expired tokens cause 406 spam
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      set({ isLoaded: true });
+      return;
+    }
+
     // Serve from cache immediately — ProtectedRoute resolves without a network round-trip
     const cached = readCache();
     if (cached) {

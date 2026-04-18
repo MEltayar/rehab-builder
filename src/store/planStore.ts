@@ -100,6 +100,14 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
   },
 
   fetchSubscription: async () => {
+    // Validate session before any DB call — expired tokens cause 406 spam
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      // No valid session; authStore's TOKEN_REFRESH_FAILED handler will sign out
+      set({ isLoaded: true });
+      return;
+    }
+
     // Serve from cache immediately so ProtectedRoute resolves without a network round-trip
     const cached = readSubCache();
     if (cached) {
