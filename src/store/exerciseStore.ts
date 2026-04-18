@@ -67,9 +67,10 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   updateExercise: async (id, data) => {
     const exercise = get().exercises.find((ex) => ex.id === id);
     if (!exercise) return;
+    const isAdmin = useUserStore.getState().canAccessAdmin();
 
-    if (!exercise.isCustom) {
-      // Built-in exercise: create a personal copy and hide the original
+    if (!exercise.isCustom && !isAdmin) {
+      // Normal user editing built-in: create personal copy, hide original
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       const copy: Exercise = {
@@ -90,6 +91,7 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
       return;
     }
 
+    // Admin/Staff or editing own custom: update shared record in DB
     const { error } = await supabase
       .from('exercises')
       .update(exercisePatchToDbRow(data))
@@ -103,15 +105,17 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   deleteExercise: async (id) => {
     const exercise = get().exercises.find((ex) => ex.id === id);
     if (!exercise) return;
+    const isAdmin = useUserStore.getState().canAccessAdmin();
 
-    if (!exercise.isCustom) {
-      // Built-in exercise: hide it for this user only (don't touch DB)
+    if (!exercise.isCustom && !isAdmin) {
+      // Normal user deleting built-in: hide for this user only
       const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
       await useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds });
       set((state) => ({ exercises: state.exercises.filter((ex) => ex.id !== id) }));
       return;
     }
 
+    // Admin/Staff or deleting own custom: remove from DB
     const { error, count } = await supabase
       .from('exercises')
       .delete({ count: 'exact' })

@@ -57,9 +57,10 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
   updateFood: async (id, data) => {
     const food = get().foods.find((f) => f.id === id);
     if (!food) return;
+    const isAdmin = useUserStore.getState().canAccessAdmin();
 
-    if (!food.isCustom) {
-      // Built-in food: create a personal copy and hide the original
+    if (!food.isCustom && !isAdmin) {
+      // Normal user editing built-in: create personal copy, hide original
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
       const copy: FoodItem = {
@@ -80,6 +81,7 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
       return;
     }
 
+    // Admin/Staff or editing own custom: update shared record in DB
     const { error } = await supabase
       .from('food_items')
       .update(foodItemPatchToDbRow(data))
@@ -93,15 +95,17 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
   deleteFood: async (id) => {
     const food = get().foods.find((f) => f.id === id);
     if (!food) return;
+    const isAdmin = useUserStore.getState().canAccessAdmin();
 
-    if (!food.isCustom) {
-      // Built-in food: hide it for this user only
+    if (!food.isCustom && !isAdmin) {
+      // Normal user deleting built-in: hide for this user only
       const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
       await useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds });
       set((state) => ({ foods: state.foods.filter((f) => f.id !== id) }));
       return;
     }
 
+    // Admin/Staff or deleting own custom: remove from DB
     const { error } = await supabase.from('food_items').delete().eq('id', id);
     if (error) throw error;
     set((state) => ({ foods: state.foods.filter((f) => f.id !== id) }));
