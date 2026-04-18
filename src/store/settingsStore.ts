@@ -57,6 +57,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   exportTemplateFavorites: [],
   exportPaletteId: undefined,
   helpAnnouncements: [],
+  hiddenExerciseIds: [],
+  hiddenFoodIds: [],
   isLoaded: false,
 
   setDarkMode: async (darkMode: boolean) => {
@@ -101,6 +103,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         exportTemplateId: previous.exportTemplateId,
         exportTemplateFavorites: previous.exportTemplateFavorites,
         exportPaletteId: previous.exportPaletteId,
+        helpAnnouncements: previous.helpAnnouncements,
+        hiddenExerciseIds: previous.hiddenExerciseIds ?? [],
+        hiddenFoodIds: previous.hiddenFoodIds ?? [],
         ...patch,
       };
       writeCache(current);
@@ -136,6 +141,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       exportTemplateId: undefined,
       exportTemplateFavorites: [],
       helpAnnouncements: [],
+      hiddenExerciseIds: [],
+      hiddenFoodIds: [],
       exportPaletteId: undefined,
       isLoaded: false,
     });

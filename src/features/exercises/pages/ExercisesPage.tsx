@@ -149,8 +149,8 @@ export default function ExercisesPage() {
       ) : (
         <ExerciseTable
           exercises={filteredExercises}
-          onEdit={(ex) => (ex.isCustom && canEdit(ex.userId)) || canAccessAdmin() ? () => handleEdit(ex) : undefined}
-          onDelete={(ex) => (ex.isCustom && canEdit(ex.userId)) || canAccessAdmin() ? () => handleDelete(ex) : undefined}
+          onEdit={(ex) => canAccessAdmin() || !ex.isCustom || canEdit(ex.userId) ? () => handleEdit(ex) : undefined}
+          onDelete={(ex) => canAccessAdmin() || !ex.isCustom || canEdit(ex.userId) ? () => handleDelete(ex) : undefined}
           onPreview={(ex) => setPreviewExercise(ex)}
           isAdmin={canAccessAdmin()}
           userNames={userNames}

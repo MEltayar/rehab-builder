@@ -285,4 +285,6 @@ export interface AppSettings {
   exportTemplateFavorites?: string[];
   exportPaletteId?: string;
   helpAnnouncements?: HelpAnnouncement[];
+  hiddenExerciseIds?: string[];
+  hiddenFoodIds?: string[];
 }

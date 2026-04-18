@@ -261,6 +261,8 @@ export function dbRowToSettings(row: Record<string, unknown>): AppSettings {
     exportTemplateFavorites: (row.export_template_favorites as string[]) ?? [],
     exportPaletteId: row.export_palette_id as string | undefined,
     helpAnnouncements: (row.help_announcements as import('../types').HelpAnnouncement[]) ?? [],
+    hiddenExerciseIds: (row.hidden_exercise_ids as string[]) ?? [],
+    hiddenFoodIds: (row.hidden_food_ids as string[]) ?? [],
   };
 }
 
@@ -287,6 +289,8 @@ export function settingsPatchToDbRow(patch: Partial<AppSettings>): Record<string
   if ('exportTemplateFavorites' in patch) row.export_template_favorites = patch.exportTemplateFavorites;
   if ('exportPaletteId' in patch) row.export_palette_id = patch.exportPaletteId;
   if ('helpAnnouncements' in patch) row.help_announcements = patch.helpAnnouncements;
+  if ('hiddenExerciseIds' in patch) row.hidden_exercise_ids = patch.hiddenExerciseIds;
+  if ('hiddenFoodIds' in patch) row.hidden_food_ids = patch.hiddenFoodIds;
   return row;
 }
 
@@ -313,6 +317,8 @@ export function settingsToDbRow(s: AppSettings): Record<string, unknown> {
     export_template_favorites: s.exportTemplateFavorites,
     export_palette_id: s.exportPaletteId,
     help_announcements: s.helpAnnouncements,
+    hidden_exercise_ids: s.hiddenExerciseIds ?? [],
+    hidden_food_ids: s.hiddenFoodIds ?? [],
   };
 }
 

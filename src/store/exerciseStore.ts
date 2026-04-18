@@ -3,6 +3,7 @@ import type { Exercise, ExerciseCategory } from '../types';
 import { supabase } from '../lib/supabase';
 import { exerciseToDbRow, exercisePatchToDbRow } from '../lib/mappers';
 import { useUserStore } from './userStore';
+import { useSettingsStore } from './settingsStore';
 import { seedIfEmpty, seedGymExercisesIfMissing, syncGymExerciseVideos, getAllExercises } from '../features/exercises/services/exerciseService';
 
 interface ExerciseStore {
@@ -41,7 +42,9 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     await seedGymExercisesIfMissing();
     await syncGymExerciseVideos();
     const all = await getAllExercises();
-    set({ exercises: all, isLoaded: true, isInitializing: false });
+    const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
+    const visible = hiddenIds.size > 0 ? all.filter((ex) => !hiddenIds.has(ex.id)) : all;
+    set({ exercises: visible, isLoaded: true, isInitializing: false });
   },
 
   addExercise: async (data) => {
@@ -62,19 +65,53 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   },
 
   updateExercise: async (id, data) => {
+    const exercise = get().exercises.find((ex) => ex.id === id);
+    if (!exercise) return;
+
+    if (!exercise.isCustom) {
+      // Built-in exercise: create a personal copy and hide the original
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const copy: Exercise = {
+        ...exercise,
+        ...data,
+        id: crypto.randomUUID(),
+        isCustom: true,
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('exercises').insert(exerciseToDbRow(copy));
+      if (error) throw error;
+      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
+      await useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds });
+      set((state) => ({
+        exercises: state.exercises.filter((ex) => ex.id !== id).concat(copy),
+      }));
+      return;
+    }
+
     const { error } = await supabase
       .from('exercises')
       .update(exercisePatchToDbRow(data))
       .eq('id', id);
     if (error) throw error;
     set((state) => ({
-      exercises: state.exercises.map((ex) =>
-        ex.id === id ? { ...ex, ...data } : ex
-      ),
+      exercises: state.exercises.map((ex) => ex.id === id ? { ...ex, ...data } : ex),
     }));
   },
 
   deleteExercise: async (id) => {
+    const exercise = get().exercises.find((ex) => ex.id === id);
+    if (!exercise) return;
+
+    if (!exercise.isCustom) {
+      // Built-in exercise: hide it for this user only (don't touch DB)
+      const hiddenIds = [...(useSettingsStore.getState().hiddenExerciseIds ?? []), id];
+      await useSettingsStore.getState().updateSettings({ hiddenExerciseIds: hiddenIds });
+      set((state) => ({ exercises: state.exercises.filter((ex) => ex.id !== id) }));
+      return;
+    }
+
     const { error, count } = await supabase
       .from('exercises')
       .delete({ count: 'exact' })

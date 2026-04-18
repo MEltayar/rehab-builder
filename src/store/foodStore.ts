@@ -3,6 +3,7 @@ import type { FoodItem } from '../types';
 import { supabase } from '../lib/supabase';
 import { foodItemToDbRow, foodItemPatchToDbRow } from '../lib/mappers';
 import { useUserStore } from './userStore';
+import { useSettingsStore } from './settingsStore';
 import { seedFoodItemsIfEmpty, getAllFoodItems } from '../features/diet/services/foodService';
 
 interface FoodStore {
@@ -32,7 +33,9 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
     if (get().isLoaded) return;
     await seedFoodItemsIfEmpty();
     const all = await getAllFoodItems();
-    set({ foods: all, isLoaded: true });
+    const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
+    const visible = hiddenIds.size > 0 ? all.filter((f) => !hiddenIds.has(f.id)) : all;
+    set({ foods: visible, isLoaded: true });
   },
 
   addFood: async (data) => {
@@ -52,6 +55,31 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
   },
 
   updateFood: async (id, data) => {
+    const food = get().foods.find((f) => f.id === id);
+    if (!food) return;
+
+    if (!food.isCustom) {
+      // Built-in food: create a personal copy and hide the original
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const copy: FoodItem = {
+        ...food,
+        ...data,
+        id: crypto.randomUUID(),
+        isCustom: true,
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('food_items').insert(foodItemToDbRow(copy));
+      if (error) throw error;
+      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
+      await useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds });
+      set((state) => ({
+        foods: state.foods.filter((f) => f.id !== id).concat(copy),
+      }));
+      return;
+    }
+
     const { error } = await supabase
       .from('food_items')
       .update(foodItemPatchToDbRow(data))
@@ -63,6 +91,17 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
   },
 
   deleteFood: async (id) => {
+    const food = get().foods.find((f) => f.id === id);
+    if (!food) return;
+
+    if (!food.isCustom) {
+      // Built-in food: hide it for this user only
+      const hiddenIds = [...(useSettingsStore.getState().hiddenFoodIds ?? []), id];
+      await useSettingsStore.getState().updateSettings({ hiddenFoodIds: hiddenIds });
+      set((state) => ({ foods: state.foods.filter((f) => f.id !== id) }));
+      return;
+    }
+
     const { error } = await supabase.from('food_items').delete().eq('id', id);
     if (error) throw error;
     set((state) => ({ foods: state.foods.filter((f) => f.id !== id) }));
