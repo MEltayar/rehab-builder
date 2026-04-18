@@ -15,6 +15,26 @@ interface SettingsStore extends ClinicInfo {
   reset: () => void;
 }
 
+const SETTINGS_CACHE_KEY = 'frl_settings';
+
+function readCache(): AppSettings | null {
+  try {
+    const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+    return raw ? JSON.parse(raw) as AppSettings : null;
+  } catch { return null; }
+}
+function writeCache(s: AppSettings) {
+  try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+}
+function clearCache() {
+  try { localStorage.removeItem(SETTINGS_CACHE_KEY); } catch { /* ignore */ }
+}
+
+function applyDarkMode(darkMode: boolean) {
+  if (darkMode) document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
+}
+
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   darkMode: false,
   profileType: undefined,
@@ -41,11 +61,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setDarkMode: async (darkMode: boolean) => {
     set({ darkMode });
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyDarkMode(darkMode);
     try {
       const user = useAuthStore.getState().user;
       if (!user) return;
@@ -87,6 +103,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         exportPaletteId: previous.exportPaletteId,
         ...patch,
       };
+      writeCache(current);
       const { error } = await supabase
         .from('settings')
         .upsert({ user_id: user.id, ...settingsToDbRow(current) }, { onConflict: 'user_id' });
@@ -97,32 +114,54 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
-  reset: () => set({
-    profileType: undefined,
-    clinicName: '',
-    clinicLogo: undefined,
-    clinicPhone: undefined,
-    clinicEmail: undefined,
-    clinicAddress: undefined,
-    clinicWebsite: undefined,
-    therapistName: undefined,
-    whatsappTemplate: undefined,
-    emailTemplate: undefined,
-    emailSubject: undefined,
-    favouriteTemplateIds: undefined,
-    clinicInstagram: undefined,
-    clinicFacebook: undefined,
-    clinicGmail: undefined,
-    clinicWhatsApp: undefined,
-    exportTemplateId: undefined,
-    exportTemplateFavorites: [],
-    helpAnnouncements: [],
-    exportPaletteId: undefined,
-    isLoaded: false,
-  }),
+  reset: () => {
+    clearCache();
+    set({
+      profileType: undefined,
+      clinicName: '',
+      clinicLogo: undefined,
+      clinicPhone: undefined,
+      clinicEmail: undefined,
+      clinicAddress: undefined,
+      clinicWebsite: undefined,
+      therapistName: undefined,
+      whatsappTemplate: undefined,
+      emailTemplate: undefined,
+      emailSubject: undefined,
+      favouriteTemplateIds: undefined,
+      clinicInstagram: undefined,
+      clinicFacebook: undefined,
+      clinicGmail: undefined,
+      clinicWhatsApp: undefined,
+      exportTemplateId: undefined,
+      exportTemplateFavorites: [],
+      helpAnnouncements: [],
+      exportPaletteId: undefined,
+      isLoaded: false,
+    });
+  },
 
   initializeFromDB: async () => {
     if (get().isLoaded) return;
+
+    // Serve from cache immediately — ProtectedRoute resolves without a network round-trip
+    const cached = readCache();
+    if (cached) {
+      set({ ...cached, isLoaded: true });
+      applyDarkMode(cached.darkMode);
+      // Refresh in background
+      supabase.from('settings').select('*').single().then(({ data, error }) => {
+        if (!error && data) {
+          const fresh = dbRowToSettings(data);
+          writeCache(fresh);
+          set({ ...fresh });
+          applyDarkMode(fresh.darkMode);
+        }
+      });
+      return;
+    }
+
+    // No cache — full fetch
     try {
       const { data, error } = await supabase
         .from('settings')
@@ -130,7 +169,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // No settings row yet — default profileType so user isn't trapped in onboarding loop
+        const defaults: AppSettings = { clinicName: '', darkMode: false, profileType: 'physio' };
+        writeCache(defaults);
         set({ isLoaded: true, profileType: 'physio' });
         return;
       }
@@ -138,13 +178,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       if (error) throw error;
 
       const settings = dbRowToSettings(data);
+      writeCache(settings);
       set({ ...settings, isLoaded: true });
-
-      if (settings.darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      applyDarkMode(settings.darkMode);
     } catch (err) {
       console.error('Failed to initialize settings from DB:', err);
       set({ isLoaded: true, profileType: get().profileType ?? 'physio' });
