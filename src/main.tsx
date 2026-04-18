@@ -10,3 +10,6 @@ createRoot(rootEl).render(
     <App />
   </StrictMode>,
 );
+
+// Remove the HTML boot spinner as soon as React has mounted
+document.getElementById('app-boot')?.remove();
