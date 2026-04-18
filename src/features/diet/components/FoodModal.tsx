@@ -39,7 +39,7 @@ interface FoodModalProps {
   food: FoodItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: FoodFormData) => void;
+  onSave: (data: FoodFormData) => Promise<void> | void;
 }
 
 const WEIGHT_UNITS = new Set(['g', 'ml']);
@@ -75,6 +75,7 @@ function optNumField(value: string): number | undefined {
 export default function FoodModal({ food, isOpen, onClose, onSave }: FoodModalProps) {
   const [form, setForm] = useState<FoodFormData>(emptyForm());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -119,10 +120,15 @@ export default function FoodModal({ food, isOpen, onClose, onSave }: FoodModalPr
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    onSave(form);
+    if (!validate() || saving) return;
+    setSaving(true);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputCls = 'px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-500';
@@ -337,9 +343,10 @@ export default function FoodModal({ food, isOpen, onClose, onSave }: FoodModalPr
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+              disabled={saving}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
             >
-              {food ? 'Save Changes' : 'Add Food'}
+              {saving ? 'Saving…' : (food ? 'Save Changes' : 'Add Food')}
             </button>
           </div>
         </form>

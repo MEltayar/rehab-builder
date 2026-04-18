@@ -42,7 +42,7 @@ interface ExerciseModalProps {
   exercise: Exercise | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: ExerciseFormData) => void;
+  onSave: (data: ExerciseFormData) => Promise<void> | void;
 }
 
 const emptyPhysioForm = (): ExerciseFormData => ({
@@ -62,6 +62,7 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
   const [form, setForm] = useState<ExerciseFormData>(isGym ? emptyGymForm() : emptyPhysioForm());
   const [tagsInput, setTagsInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -109,14 +110,16 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-    onSave({ ...form, tags });
+    if (!validate() || saving) return;
+    const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+    setSaving(true);
+    try {
+      await onSave({ ...form, tags });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isEditMode = exercise !== null;
@@ -285,10 +288,10 @@ export default function ExerciseModal({ exercise, isOpen, onClose, onSave }: Exe
             </button>
             <button
               type="submit"
-              disabled={!form.name.trim()}
+              disabled={!form.name.trim() || saving}
               className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {saveLabel}
+              {saving ? 'Saving…' : saveLabel}
             </button>
           </div>
         </form>
