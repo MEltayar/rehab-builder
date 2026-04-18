@@ -81,12 +81,25 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
       return;
     }
 
-    // Admin/Staff or editing own custom: update shared record in DB
-    const { error } = await supabase
+    // Admin/Staff or editing own custom: update shared record in DB.
+    // Add .select('id') to detect if RLS silently blocked the update.
+    const { data: updated, error } = await supabase
       .from('food_items')
       .update(foodItemPatchToDbRow(data))
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
     if (error) throw error;
+
+    // RLS blocked the update (0 rows affected) — upsert with current user as owner
+    if (!updated || updated.length === 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const full: FoodItem = { ...food, ...data, userId: user?.id };
+      const { error: upsertError } = await supabase
+        .from('food_items')
+        .upsert({ ...foodItemToDbRow(full), user_id: user?.id }, { onConflict: 'id' });
+      if (upsertError) throw upsertError;
+    }
+
     set((state) => ({
       foods: state.foods.map((f) => (f.id === id ? { ...f, ...data } : f)),
     }));
