@@ -75,8 +75,12 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   },
 
   deleteExercise: async (id) => {
-    const { error } = await supabase.from('exercises').delete().eq('id', id);
+    const { error, count } = await supabase
+      .from('exercises')
+      .delete({ count: 'exact' })
+      .eq('id', id);
     if (error) throw error;
+    if (count === 0) throw new Error('Exercise could not be deleted. You may not have permission.');
     set((state) => ({
       exercises: state.exercises.filter((ex) => ex.id !== id),
     }));

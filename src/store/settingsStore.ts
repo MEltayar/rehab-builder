@@ -147,7 +147,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       }
     } catch (err) {
       console.error('Failed to initialize settings from DB:', err);
-      set({ isLoaded: true });
+      set({ isLoaded: true, profileType: get().profileType ?? 'physio' });
     }
   },
 }));
