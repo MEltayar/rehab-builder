@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     });
 
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESH_FAILED') {
+      if ((event as string) === 'TOKEN_REFRESH_FAILED') {
         // Expired or revoked refresh token — sign out to clear stale localStorage entry
         supabase.auth.signOut().catch(() => {});
         set({ session: null, user: null, isLoaded: true });
