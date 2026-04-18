@@ -30,7 +30,8 @@ interface UnifiedUser {
   status: StatusOption | null;
   trialStartedAt: string | null;
   currentPeriodEnd: string | null;
-  clientsCreated: number;
+  clientsCreated: number;  // ever-created counter (used for trial limit)
+  activeClients: number;   // actual current count from clients table
 }
 
 interface AdminClient {
@@ -176,14 +177,21 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [profileRes, subRes] = await Promise.all([
+    const [profileRes, subRes, clientRes] = await Promise.all([
       supabase.from('user_profiles').select('*').order('display_name'),
       supabase.from('subscriptions').select('*'),
+      supabase.from('clients').select('user_id'),
     ]);
 
     const subMap = new Map(
       (subRes.data ?? []).map((s) => [s.user_id, s]),
     );
+
+    // Count active clients per user from the real clients table
+    const activeClientMap = new Map<string, number>();
+    for (const c of clientRes.data ?? []) {
+      if (c.user_id) activeClientMap.set(c.user_id, (activeClientMap.get(c.user_id) ?? 0) + 1);
+    }
 
     setUsers(
       (profileRes.data ?? []).map((p) => {
@@ -198,6 +206,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           trialStartedAt: sub?.trial_started_at ?? null,
           currentPeriodEnd: sub?.current_period_end ?? null,
           clientsCreated: sub?.clients_created ?? 0,
+          activeClients: activeClientMap.get(p.id) ?? 0,
         };
       }),
     );
@@ -375,9 +384,14 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                     )}
                   </td>
 
-                  {/* Clients */}
-                  <td className="px-4 py-3 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    {u.subId ? u.clientsCreated : '—'}
+                  {/* Clients — active count from DB, trial counter in secondary text */}
+                  <td className="px-4 py-3 text-center">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{u.activeClients}</span>
+                    {u.subId && u.clientsCreated !== u.activeClients && (
+                      <span className="block text-[10px] text-gray-400 dark:text-gray-500" title="Trial counter (includes deleted)">
+                        {u.clientsCreated} ever
+                      </span>
+                    )}
                   </td>
 
                   {/* Actions */}
