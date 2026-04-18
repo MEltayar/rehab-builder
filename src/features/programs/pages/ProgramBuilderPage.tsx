@@ -126,7 +126,9 @@ export default function ProgramBuilderPage() {
     if (!draft) return;
     const errs: Record<string, string> = {};
     if (!draft.clientId && clients.length > 0) errs.clientId = 'Please select a client.';
-    if (draft.name.trim()) {
+    if (!draft.name.trim()) {
+      errs.name = 'Program name is required.';
+    } else {
       const nameTaken = programs.some(
         (p) => p.clientId === draft.clientId &&
                p.name.trim().toLowerCase() === draft.name.trim().toLowerCase() &&

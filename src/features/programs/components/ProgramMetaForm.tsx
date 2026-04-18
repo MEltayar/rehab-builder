@@ -44,13 +44,14 @@ export default function ProgramMetaForm({ draft, clients, errors, onChange }: Pr
 
       {/* Name */}
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>Program Name</label>
+        <label className={labelClass}>Program Name <span className="text-red-500">*</span></label>
         <input
           type="text"
+          required
           value={draft.name}
           onChange={(e) => onChange('name', e.target.value)}
           placeholder={terms.programNamePlaceholder}
-          className={inputClass}
+          className={`${inputClass} ${errors.name ? 'border-red-400 dark:border-red-500' : ''}`}
         />
         {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
       </div>
