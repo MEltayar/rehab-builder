@@ -128,7 +128,7 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
         const now = new Date().toISOString();
         const { data: newSub, error: insertError } = await supabase
           .from('subscriptions')
-          .insert({ user_id: user.id, plan: 'trial', status: 'active', trial_started_at: now, clients_created: 0 })
+          .upsert({ user_id: user.id, plan: 'trial', status: 'active', trial_started_at: now, clients_created: 0 }, { onConflict: 'user_id', ignoreDuplicates: true })
           .select('*')
           .single();
         if (!insertError && newSub) {

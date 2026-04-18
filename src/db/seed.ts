@@ -1078,7 +1078,7 @@ export async function seedDatabase() {
   if ((subCount ?? 0) === 0) {
     const { error } = await supabase
       .from('subscriptions')
-      .insert({ user_id: user.id });
+      .upsert({ user_id: user.id }, { onConflict: 'user_id', ignoreDuplicates: true });
     if (error) console.error('Failed to seed subscription:', error);
   }
 
@@ -1086,7 +1086,7 @@ export async function seedDatabase() {
   if ((settingsCount ?? 0) === 0) {
     const { error } = await supabase
       .from('settings')
-      .insert({ user_id: user.id, clinic_name: 'Rehab Clinic', dark_mode: false });
+      .upsert({ user_id: user.id, clinic_name: 'Rehab Clinic', dark_mode: false }, { onConflict: 'user_id', ignoreDuplicates: true });
     if (error) console.error('Failed to seed settings:', error);
   }
 }
