@@ -116,7 +116,7 @@ function FoodTableRow({ food, onEdit, onDelete }: FoodTableRowProps) {
       {/* Actions */}
       <td className="py-2 pr-4 pl-1 whitespace-nowrap">
         {(onEdit || onDelete) && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1">
             {onEdit && (
               <button
                 onClick={onEdit}
