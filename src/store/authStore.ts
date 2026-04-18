@@ -20,15 +20,25 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isLoaded: false,
 
   initialize: () => {
-    // getSession() reads from localStorage immediately — resolves before any network call
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Stale/corrupted token — wipe it so next load starts clean
+        supabase.auth.signOut().catch(() => {});
+        set({ session: null, user: null, isLoaded: true });
+        return;
+      }
       set({ session, user: session?.user ?? null, isLoaded: true });
     }).catch(() => {
       set({ isLoaded: true });
     });
 
-    // onAuthStateChange handles sign-in, sign-out, and token refresh going forward
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESH_FAILED') {
+        // Expired or revoked refresh token — sign out to clear stale localStorage entry
+        supabase.auth.signOut().catch(() => {});
+        set({ session: null, user: null, isLoaded: true });
+        return;
+      }
       set({ session, user: session?.user ?? null, isLoaded: true });
     });
   },
