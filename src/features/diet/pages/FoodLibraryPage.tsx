@@ -103,13 +103,12 @@ export default function FoodLibraryPage() {
             <FoodTable
               foods={foods}
               onEdit={(food) => {
-                if (!canAccessDietPlans || !canEdit(food.userId)) return;
-                setSelectedFood(food);
-                setModalOpen(true);
+                if (!canAccessDietPlans || !canEdit(food.userId)) return undefined;
+                return () => { setSelectedFood(food); setModalOpen(true); };
               }}
               onDelete={(food) => {
-                if (!canAccessDietPlans || !food.isCustom || !canEdit(food.userId)) return;
-                showConfirm({
+                if (!canAccessDietPlans || !food.isCustom || !canEdit(food.userId)) return undefined;
+                return () => showConfirm({
                   title: 'Delete Food',
                   message: `Are you sure you want to delete "${food.name}"?`,
                   variant: 'danger',

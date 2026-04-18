@@ -146,8 +146,8 @@ function FoodTableRow({ food, onEdit, onDelete }: FoodTableRowProps) {
 
 interface FoodTableProps {
   foods: FoodItem[];
-  onEdit: (food: FoodItem) => void;
-  onDelete: (food: FoodItem) => void;
+  onEdit?: (food: FoodItem) => (() => void) | undefined;
+  onDelete?: (food: FoodItem) => (() => void) | undefined;
 }
 
 export default function FoodTable({ foods, onEdit, onDelete }: FoodTableProps) {
@@ -212,8 +212,8 @@ export default function FoodTable({ foods, onEdit, onDelete }: FoodTableProps) {
               <FoodTableRow
                 key={food.id}
                 food={food}
-                onEdit={food.isCustom ? () => onEdit(food) : undefined}
-                onDelete={food.isCustom ? () => onDelete(food) : undefined}
+                onEdit={onEdit?.(food)}
+                onDelete={onDelete?.(food)}
               />
             ))}
           </tbody>
