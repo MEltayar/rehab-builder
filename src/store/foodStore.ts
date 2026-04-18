@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { FoodItem } from '../types';
 import { supabase } from '../lib/supabase';
-import { foodItemToDbRow, foodItemPatchToDbRow } from '../lib/mappers';
+import { dbRowToFoodItem, foodItemToDbRow, foodItemPatchToDbRow } from '../lib/mappers';
 import { useUserStore } from './userStore';
 import { useSettingsStore } from './settingsStore';
 import { seedFoodItemsIfEmpty, getAllFoodItems } from '../features/diet/services/foodService';
@@ -23,6 +23,9 @@ interface FoodStore {
   filteredFoods: () => FoodItem[];
 }
 
+// Module-level channel so we can clean up on re-init
+let foodChannel: ReturnType<typeof supabase.channel> | null = null;
+
 export const useFoodStore = create<FoodStore>((set, get) => ({
   foods: [],
   isLoaded: false,
@@ -36,6 +39,38 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
     const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
     const visible = hiddenIds.size > 0 ? all.filter((f) => !hiddenIds.has(f.id)) : all;
     set({ foods: visible, isLoaded: true });
+
+    // Clean up any existing subscription before creating a new one
+    if (foodChannel) {
+      supabase.removeChannel(foodChannel);
+    }
+
+    // Subscribe to real-time changes so staff edits propagate to all users instantly
+    foodChannel = supabase
+      .channel('food-items-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'food_items' }, (payload) => {
+        const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
+
+        if (payload.eventType === 'INSERT') {
+          const newFood = dbRowToFoodItem(payload.new as Record<string, unknown>);
+          if (hiddenIds.has(newFood.id)) return;
+          set((state) => {
+            if (state.foods.some((f) => f.id === newFood.id)) return state;
+            return { foods: [...state.foods, newFood] };
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = dbRowToFoodItem(payload.new as Record<string, unknown>);
+          set((state) => ({
+            foods: state.foods.map((f) => f.id === updated.id ? updated : f),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id: string }).id;
+          set((state) => ({
+            foods: state.foods.filter((f) => f.id !== deletedId),
+          }));
+        }
+      })
+      .subscribe();
   },
 
   addFood: async (data) => {
@@ -81,25 +116,14 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
       return;
     }
 
-    // Admin/Staff or editing own custom: update shared record in DB.
-    // Add .select('id') to detect if RLS silently blocked the update.
-    const { data: updated, error } = await supabase
+    // Admin/Staff: update shared record in DB
+    const { error } = await supabase
       .from('food_items')
       .update(foodItemPatchToDbRow(data))
-      .eq('id', id)
-      .select('id');
+      .eq('id', id);
     if (error) throw error;
-
-    // RLS blocked the update (0 rows affected) — upsert with current user as owner
-    if (!updated || updated.length === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      const full: FoodItem = { ...food, ...data, userId: user?.id };
-      const { error: upsertError } = await supabase
-        .from('food_items')
-        .upsert({ ...foodItemToDbRow(full), user_id: user?.id }, { onConflict: 'id' });
-      if (upsertError) throw upsertError;
-    }
-
+    // Realtime subscription will propagate the change to all other users automatically.
+    // Update local state immediately for the current user.
     set((state) => ({
       foods: state.foods.map((f) => (f.id === id ? { ...f, ...data } : f)),
     }));

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Exercise, ExerciseCategory } from '../types';
 import { supabase } from '../lib/supabase';
-import { exerciseToDbRow, exercisePatchToDbRow } from '../lib/mappers';
+import { dbRowToExercise, exerciseToDbRow, exercisePatchToDbRow } from '../lib/mappers';
 import { useUserStore } from './userStore';
 import { useSettingsStore } from './settingsStore';
 import { seedIfEmpty, seedGymExercisesIfMissing, syncGymExerciseVideos, getAllExercises } from '../features/exercises/services/exerciseService';
@@ -27,6 +27,9 @@ interface ExerciseStore {
   availableTags: () => string[];
 }
 
+// Module-level channel so we can clean up on re-init
+let exerciseChannel: ReturnType<typeof supabase.channel> | null = null;
+
 export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   exercises: [],
   isLoaded: false,
@@ -45,13 +48,43 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
     const visible = hiddenIds.size > 0 ? all.filter((ex) => !hiddenIds.has(ex.id)) : all;
     set({ exercises: visible, isLoaded: true, isInitializing: false });
+
+    // Clean up any existing subscription before creating a new one
+    if (exerciseChannel) {
+      supabase.removeChannel(exerciseChannel);
+    }
+
+    // Subscribe to real-time changes so staff edits propagate to all users instantly
+    exerciseChannel = supabase
+      .channel('exercises-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'exercises' }, (payload) => {
+        const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
+
+        if (payload.eventType === 'INSERT') {
+          const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
+          if (hiddenIds.has(newEx.id)) return;
+          set((state) => {
+            if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
+            return { exercises: [...state.exercises, newEx] };
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = dbRowToExercise(payload.new as Record<string, unknown>);
+          set((state) => ({
+            exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id: string }).id;
+          set((state) => ({
+            exercises: state.exercises.filter((ex) => ex.id !== deletedId),
+          }));
+        }
+      })
+      .subscribe();
   },
 
   addExercise: async (data) => {
     const { data: { user } } = await supabase.auth.getUser();
     const isAdmin = useUserStore.getState().canAccessAdmin();
-    // Admin/staff exercises are treated as built-in (visible to all users).
-    // Regular user exercises are personal custom (visible only to them).
     const exercise: Exercise = {
       ...data,
       id: crypto.randomUUID(),
@@ -91,26 +124,14 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
       return;
     }
 
-    // Admin/Staff or editing own custom: update shared record in DB.
-    // Add .select('id') so we can detect if RLS silently blocked the update
-    // (built-in exercises may be owned by a different user_id in the DB).
-    const { data: updated, error } = await supabase
+    // Admin/Staff: update shared record in DB
+    const { error } = await supabase
       .from('exercises')
       .update(exercisePatchToDbRow(data))
-      .eq('id', id)
-      .select('id');
+      .eq('id', id);
     if (error) throw error;
-
-    // RLS blocked the update (0 rows affected) — upsert with current user as owner
-    if (!updated || updated.length === 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      const full: Exercise = { ...exercise, ...data, userId: user?.id };
-      const { error: upsertError } = await supabase
-        .from('exercises')
-        .upsert({ ...exerciseToDbRow(full), user_id: user?.id }, { onConflict: 'id' });
-      if (upsertError) throw upsertError;
-    }
-
+    // Realtime subscription will propagate the change to all other users automatically.
+    // Update local state immediately for the current user.
     set((state) => ({
       exercises: state.exercises.map((ex) => ex.id === id ? { ...ex, ...data } : ex),
     }));
@@ -156,4 +177,3 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     return [...new Set(tags)].sort();
   },
 }));
-
