@@ -342,8 +342,8 @@ export default function ProgramBuilderPage() {
         ) : (
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
+            disabled={saving || !draft?.name?.trim()}
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
