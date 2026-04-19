@@ -57,15 +57,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
     if (cached !== null) {
       set({ userId: user.id, role: cached, isLoaded: true, roleConfirmed: false });
       supabase.from('user_profiles').select('role, display_name').eq('id', user.id).maybeSingle()
-        .then(({ data }) => {
-          const fresh = (data?.role as UserRole) ?? null;
-          writeCache(user.id, fresh);
-          set({ role: fresh, displayName: data?.display_name ?? user.email ?? null, roleConfirmed: true });
-        })
-        .catch(() => {
-          // DB unreachable — trust the cache but mark confirmed so UI doesn't hang
-          set({ roleConfirmed: true });
-        });
+        .then(
+          ({ data }) => {
+            const fresh = (data?.role as UserRole) ?? null;
+            writeCache(user.id, fresh);
+            set({ role: fresh, displayName: data?.display_name ?? user.email ?? null, roleConfirmed: true });
+          },
+          () => {
+            // DB unreachable — trust the cache but mark confirmed so UI doesn't hang
+            set({ roleConfirmed: true });
+          },
+        );
       return;
     }
 
