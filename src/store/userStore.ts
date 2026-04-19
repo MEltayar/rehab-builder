@@ -21,6 +21,7 @@ function clearCache(userId: string) {
 interface UserStore {
   userId: string | null;
   role: UserRole | null;
+  roleConfirmed: boolean;  // true only after DB has verified the role
   displayName: string | null;
   isLoaded: boolean;
 
@@ -34,38 +35,41 @@ interface UserStore {
 export const useUserStore = create<UserStore>((set, get) => ({
   userId: null,
   role: null,
+  roleConfirmed: false,
   displayName: null,
   isLoaded: false,
 
   reset: () => {
     const { userId } = get();
     if (userId) clearCache(userId);
-    set({ userId: null, role: null, displayName: null, isLoaded: false });
+    set({ userId: null, role: null, roleConfirmed: false, displayName: null, isLoaded: false });
   },
 
   initialize: async () => {
     if (get().isLoaded) return;
-    // getSession() reads from localStorage — no network call
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
-    if (!user) { set({ isLoaded: true }); return; }
+    if (!user) { set({ isLoaded: true, roleConfirmed: true }); return; }
 
-    // Serve from cache immediately so ProtectedRoute resolves without waiting for Supabase
+    // Serve from cache immediately so ProtectedRoute resolves without a network round-trip,
+    // but keep roleConfirmed=false until DB verifies — admin nav waits for confirmation.
     const cached = readCache(user.id);
     if (cached !== null) {
-      set({ userId: user.id, role: cached, isLoaded: true });
-      // Verify in the background and update if the role changed
+      set({ userId: user.id, role: cached, isLoaded: true, roleConfirmed: false });
       supabase.from('user_profiles').select('role, display_name').eq('id', user.id).maybeSingle()
         .then(({ data }) => {
-          if (!data) return;
-          const fresh = data.role as UserRole;
+          const fresh = (data?.role as UserRole) ?? null;
           writeCache(user.id, fresh);
-          set({ role: fresh, displayName: data.display_name ?? user.email ?? null });
+          set({ role: fresh, displayName: data?.display_name ?? user.email ?? null, roleConfirmed: true });
+        })
+        .catch(() => {
+          // DB unreachable — trust the cache but mark confirmed so UI doesn't hang
+          set({ roleConfirmed: true });
         });
       return;
     }
 
-    // No cache yet — fetch from DB (first login or after cache clear)
+    // No cache — full DB fetch (first login or after cache clear)
     const { data, error } = await supabase
       .from('user_profiles')
       .select('role, display_name')
@@ -80,6 +84,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
       role,
       displayName: data?.display_name ?? user.email ?? null,
       isLoaded: true,
+      roleConfirmed: true,
     });
   },
 

@@ -42,7 +42,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const signOut = useAuthStore((s) => s.signOut);
   const isPro = usePlanStore((s) => s.isPro)();
   const isGym = useSettingsStore((s) => s.profileType) === 'gym';
-  const userRole = useUserStore((s) => s.role);
+  const userRole         = useUserStore((s) => s.role);
+  const roleConfirmed    = useUserStore((s) => s.roleConfirmed);
   const [signingOut, setSigningOut] = useState(false);
 
   const navSections = BASE_NAV
@@ -147,7 +148,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         })}
 
         {/* Admin panel — super_admin and staff */}
-        {(userRole === 'super_admin' || userRole === 'staff') && (
+        {roleConfirmed && (userRole === 'super_admin' || userRole === 'staff') && (
           <>
             <div className="my-1 border-t border-white/15" />
             <NavLink
