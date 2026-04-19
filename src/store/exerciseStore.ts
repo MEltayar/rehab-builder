@@ -54,14 +54,18 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
       supabase.removeChannel(exerciseChannel);
     }
 
-    // Subscribe to real-time changes so staff edits propagate to all users instantly
+    // Subscribe to real-time changes so staff edits propagate to all users instantly.
+    // Only shared (is_custom=false) rows are synced — personal copies stay private.
     exerciseChannel = supabase
       .channel('exercises-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'exercises' }, (payload) => {
         const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
+        const currentUserId = useUserStore.getState().userId;
 
         if (payload.eventType === 'INSERT') {
           const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
+          // Ignore other users' personal copies — only sync shared library rows
+          if (newEx.isCustom && newEx.userId !== currentUserId) return;
           if (hiddenIds.has(newEx.id)) return;
           set((state) => {
             if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
@@ -69,6 +73,8 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
           });
         } else if (payload.eventType === 'UPDATE') {
           const updated = dbRowToExercise(payload.new as Record<string, unknown>);
+          // Ignore updates to other users' personal copies
+          if (updated.isCustom && updated.userId !== currentUserId) return;
           set((state) => ({
             exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
           }));
