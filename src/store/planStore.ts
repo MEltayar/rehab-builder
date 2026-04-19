@@ -100,6 +100,8 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
   },
 
   fetchSubscription: async () => {
+    if (get().isLoaded) return;
+
     // Validate session before any DB call — expired tokens cause 406 spam
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) {
@@ -113,21 +115,26 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
     if (cached) {
       set({ subscription: cached, isLoaded: true });
       // Verify in the background and update if the plan changed.
-      // maybeSingle tolerates 0 rows without returning HTTP 406.
-      supabase.from('subscriptions').select('*').maybeSingle().then(({ data, error }) => {
-        if (!error && data) {
-          const fresh = dbRowToSubscription(data);
-          writeSubCache(fresh);
-          set({ subscription: fresh });
-        }
-      });
+      // Order + limit tolerate any number of rows (handles historical duplicates).
+      supabase.from('subscriptions').select('*')
+        .order('trial_started_at', { ascending: false }).limit(1).maybeSingle()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const fresh = dbRowToSubscription(data);
+            writeSubCache(fresh);
+            set({ subscription: fresh });
+          }
+        });
       return;
     }
 
-    // No cache — full fetch. maybeSingle returns null for 0 rows instead of 406.
+    // No cache — full fetch. Pick the newest row to tolerate historical duplicates
+    // from the old ignoreDuplicates bug.
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
+      .order('trial_started_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
