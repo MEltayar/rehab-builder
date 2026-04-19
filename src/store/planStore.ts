@@ -112,8 +112,9 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
     const cached = readSubCache();
     if (cached) {
       set({ subscription: cached, isLoaded: true });
-      // Verify in the background and update if the plan changed
-      supabase.from('subscriptions').select('*').single().then(({ data, error }) => {
+      // Verify in the background and update if the plan changed.
+      // maybeSingle tolerates 0 rows without returning HTTP 406.
+      supabase.from('subscriptions').select('*').maybeSingle().then(({ data, error }) => {
         if (!error && data) {
           const fresh = dbRowToSubscription(data);
           writeSubCache(fresh);
@@ -123,33 +124,43 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
       return;
     }
 
-    // No cache — full fetch
+    // No cache — full fetch. maybeSingle returns null for 0 rows instead of 406.
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
-      .single();
+      .maybeSingle();
 
-    // No subscription row yet — auto-create a trial (fallback for users who slipped through)
-    if (error && error.code === 'PGRST116') {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const now = new Date().toISOString();
-        const { data: newSub, error: insertError } = await supabase
-          .from('subscriptions')
-          .upsert({ user_id: user.id, plan: 'trial', status: 'active', trial_started_at: now, clients_created: 0 }, { onConflict: 'user_id', ignoreDuplicates: true })
-          .select('*')
-          .single();
-        if (!insertError && newSub) {
-          const sub = dbRowToSubscription(newSub);
-          writeSubCache(sub);
-          set({ subscription: sub, isLoaded: true });
-          return;
-        }
-      }
+    if (error) {
+      console.error('Failed to fetch subscription:', error);
       set({ isLoaded: true });
       return;
     }
-    if (error) { console.error('Failed to fetch subscription:', error); set({ isLoaded: true }); return; }
+
+    // No subscription row yet — auto-create a trial (fallback for users who slipped through).
+    // Dropping ignoreDuplicates so the upsert always returns the row (existing or new).
+    if (!data) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { set({ isLoaded: true }); return; }
+      const now = new Date().toISOString();
+      const { data: newSub, error: insertError } = await supabase
+        .from('subscriptions')
+        .upsert(
+          { user_id: user.id, plan: 'trial', status: 'active', trial_started_at: now, clients_created: 0 },
+          { onConflict: 'user_id' },
+        )
+        .select('*')
+        .maybeSingle();
+      if (!insertError && newSub) {
+        const sub = dbRowToSubscription(newSub);
+        writeSubCache(sub);
+        set({ subscription: sub, isLoaded: true });
+        return;
+      }
+      if (insertError) console.error('Failed to create trial subscription:', insertError);
+      set({ isLoaded: true });
+      return;
+    }
+
     const sub = dbRowToSubscription(data);
     writeSubCache(sub);
     set({ subscription: sub, isLoaded: true });
