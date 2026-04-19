@@ -54,37 +54,36 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
       supabase.removeChannel(exerciseChannel);
     }
 
-    // Subscribe to real-time changes so staff edits propagate to all users instantly.
-    // Only shared (is_custom=false) rows are synced — personal copies stay private.
+    // Subscribe only to shared library rows (is_custom=false) so personal copies
+    // never propagate to other users. Server-side filter is more reliable than
+    // client-side filtering.
     exerciseChannel = supabase
       .channel('exercises-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'exercises' }, (payload) => {
-        const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
-        const currentUserId = useUserStore.getState().userId;
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'exercises', filter: 'is_custom=eq.false' },
+        (payload) => {
+          const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
 
-        if (payload.eventType === 'INSERT') {
-          const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
-          // Ignore other users' personal copies — only sync shared library rows
-          if (newEx.isCustom && newEx.userId !== currentUserId) return;
-          if (hiddenIds.has(newEx.id)) return;
-          set((state) => {
-            if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
-            return { exercises: [...state.exercises, newEx] };
-          });
-        } else if (payload.eventType === 'UPDATE') {
-          const updated = dbRowToExercise(payload.new as Record<string, unknown>);
-          // Ignore updates to other users' personal copies
-          if (updated.isCustom && updated.userId !== currentUserId) return;
-          set((state) => ({
-            exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
-          }));
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = (payload.old as { id: string }).id;
-          set((state) => ({
-            exercises: state.exercises.filter((ex) => ex.id !== deletedId),
-          }));
-        }
-      })
+          if (payload.eventType === 'INSERT') {
+            const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
+            if (hiddenIds.has(newEx.id)) return;
+            set((state) => {
+              if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
+              return { exercises: [...state.exercises, newEx] };
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = dbRowToExercise(payload.new as Record<string, unknown>);
+            set((state) => ({
+              exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
+            }));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            set((state) => ({
+              exercises: state.exercises.filter((ex) => ex.id !== deletedId),
+            }));
+          }
+        },
+      )
       .subscribe();
   },
 

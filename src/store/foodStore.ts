@@ -45,37 +45,36 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
       supabase.removeChannel(foodChannel);
     }
 
-    // Subscribe to real-time changes so staff edits propagate to all users instantly.
-    // Only shared (is_custom=false) rows are synced — personal copies stay private.
+    // Subscribe only to shared library rows (is_custom=false) so personal copies
+    // never propagate to other users. Server-side filter is more reliable than
+    // client-side filtering.
     foodChannel = supabase
       .channel('food-items-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'food_items' }, (payload) => {
-        const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
-        const currentUserId = useUserStore.getState().userId;
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'food_items', filter: 'is_custom=eq.false' },
+        (payload) => {
+          const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
 
-        if (payload.eventType === 'INSERT') {
-          const newFood = dbRowToFoodItem(payload.new as Record<string, unknown>);
-          // Ignore other users' personal copies — only sync shared library rows
-          if (newFood.isCustom && newFood.userId !== currentUserId) return;
-          if (hiddenIds.has(newFood.id)) return;
-          set((state) => {
-            if (state.foods.some((f) => f.id === newFood.id)) return state;
-            return { foods: [...state.foods, newFood] };
-          });
-        } else if (payload.eventType === 'UPDATE') {
-          const updated = dbRowToFoodItem(payload.new as Record<string, unknown>);
-          // Ignore updates to other users' personal copies
-          if (updated.isCustom && updated.userId !== currentUserId) return;
-          set((state) => ({
-            foods: state.foods.map((f) => f.id === updated.id ? updated : f),
-          }));
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = (payload.old as { id: string }).id;
-          set((state) => ({
-            foods: state.foods.filter((f) => f.id !== deletedId),
-          }));
-        }
-      })
+          if (payload.eventType === 'INSERT') {
+            const newFood = dbRowToFoodItem(payload.new as Record<string, unknown>);
+            if (hiddenIds.has(newFood.id)) return;
+            set((state) => {
+              if (state.foods.some((f) => f.id === newFood.id)) return state;
+              return { foods: [...state.foods, newFood] };
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = dbRowToFoodItem(payload.new as Record<string, unknown>);
+            set((state) => ({
+              foods: state.foods.map((f) => f.id === updated.id ? updated : f),
+            }));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as { id: string }).id;
+            set((state) => ({
+              foods: state.foods.filter((f) => f.id !== deletedId),
+            }));
+          }
+        },
+      )
       .subscribe();
   },
 
