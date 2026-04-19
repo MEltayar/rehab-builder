@@ -63,13 +63,13 @@ export async function syncGymExerciseVideos(): Promise<void> {
 export async function getAllExercises(): Promise<Exercise[]> {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
-  const isAdmin = useUserStore.getState().canAccessAdmin();
 
-  // Admins see all exercises. Regular users see built-in + their own custom.
+  // Everyone sees shared exercises (is_custom=false) + their own custom only.
+  // Admin/staff are NOT special here — they should not see other users' personal copies.
   let query = supabase.from('exercises').select('*');
-  if (!isAdmin && userId) {
+  if (userId) {
     query = query.or(`is_custom.eq.false,user_id.eq.${userId}`);
-  } else if (!isAdmin) {
+  } else {
     query = query.eq('is_custom', false);
   }
 

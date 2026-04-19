@@ -28,11 +28,14 @@ export async function seedFoodItemsIfEmpty(): Promise<void> {
 export async function getAllFoodItems(): Promise<FoodItem[]> {
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id;
-  const isAdmin = useUserStore.getState().canAccessAdmin();
 
+  // Everyone sees shared food items (is_custom=false) + their own custom only.
+  // Admin/staff are NOT special here — they should not see other users' personal copies.
   let query = supabase.from('food_items').select('*');
-  if (!isAdmin && userId) {
+  if (userId) {
     query = query.or(`is_custom.eq.false,user_id.eq.${userId}`);
+  } else {
+    query = query.eq('is_custom', false);
   }
 
   const { data, error } = await query;
