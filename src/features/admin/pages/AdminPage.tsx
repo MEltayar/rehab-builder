@@ -170,7 +170,8 @@ function SelectCell<T extends string>({
 
 // ── Unified Users Tab ─────────────────────────────────────────────────────────
 
-function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: boolean }) {
+  const canManage = isSuperAdmin || isStaff; // can edit subscriptions & names
   const [users, setUsers] = useState<UnifiedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const showToast = useToastStore((s) => s.showToast);
@@ -289,12 +290,12 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
               <Th>Status</Th>
               <Th>Period End</Th>
               <Th>Clients</Th>
-              {isSuperAdmin && <Th>Actions</Th>}
+              {canManage && <Th>Actions</Th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {users.map((u) => {
-              const canEdit = isSuperAdmin || u.role !== 'super_admin';
+              const canEdit = canManage && u.role !== 'super_admin';
               return (
                 <tr key={u.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
 
@@ -336,7 +337,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
                   {/* Plan */}
                   <td className="px-4 py-3">
-                    {isSuperAdmin ? (
+                    {canManage ? (
                       <div className="relative inline-flex items-center gap-1">
                         <select
                           value={u.plan ?? 'trial'}
@@ -356,7 +357,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
                   {/* Status */}
                   <td className="px-4 py-3">
-                    {u.status && isSuperAdmin ? (
+                    {u.status && canManage ? (
                       <SelectCell<StatusOption>
                         value={u.status}
                         options={[...STATUS_OPTIONS]}
@@ -372,7 +373,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
                   {/* Period End */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {u.subId && isSuperAdmin ? (
+                    {u.subId && canManage ? (
                       <input
                         type="date"
                         defaultValue={u.currentPeriodEnd ? u.currentPeriodEnd.slice(0, 10) : ''}
@@ -395,7 +396,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
                   </td>
 
                   {/* Actions */}
-                  {isSuperAdmin && (
+                  {canManage && (
                     <td className="px-4 py-3">
                       {u.subId && (
                         <div className="flex items-center gap-1">
@@ -424,7 +425,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             })}
             {users.length === 0 && (
               <tr>
-                <td colSpan={isSuperAdmin ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                <td colSpan={canManage ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                   No users yet.
                 </td>
               </tr>
@@ -441,7 +442,7 @@ function UsersTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
 // ── Clients Tab ───────────────────────────────────────────────────────────────
 
-function ClientsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+function ClientsTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: boolean }) {
   const [clients, setClients] = useState<AdminClient[]>([]);
   const [loading, setLoading] = useState(true);
   const currentUserId = useUserStore((s) => s.userId);
@@ -489,7 +490,7 @@ function ClientsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   }
 
   const canEditClient = (c: AdminClient) =>
-    isSuperAdmin || c.userId === currentUserId;
+    isSuperAdmin || isStaff || c.userId === currentUserId;
 
   if (loading) return <Loader />;
 
@@ -583,6 +584,7 @@ export default function AdminPage() {
   const isSuperAdmin = useUserStore((s) => s.isSuperAdmin)();
   const canAccessAdmin = useUserStore((s) => s.canAccessAdmin)();
   const role = useUserStore((s) => s.role);
+  const isStaff = role === 'staff';
 
   if (!canAccessAdmin) {
     return (
@@ -609,7 +611,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Admin Panel</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {isSuperAdmin ? 'Full control — users, subscriptions, and clients.' : 'Read-only view of all users and clients.'}
+            {isSuperAdmin ? 'Full control — users, subscriptions, and clients.' : isStaff ? 'Staff access — manage subscriptions and clients.' : 'Read-only view of all users and clients.'}
             <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
               {role === 'super_admin' ? 'Super Admin' : 'Staff'}
             </span>
@@ -636,8 +638,8 @@ export default function AdminPage() {
       </div>
 
       {/* Tab content */}
-      {tab === 'users'   && <UsersTab   isSuperAdmin={isSuperAdmin} />}
-      {tab === 'clients' && <ClientsTab isSuperAdmin={isSuperAdmin} />}
+      {tab === 'users'   && <UsersTab   isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
+      {tab === 'clients' && <ClientsTab isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
 
     </div>
   );
