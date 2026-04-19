@@ -5,6 +5,7 @@ import { dbRowToFoodItem, foodItemToDbRow, foodItemPatchToDbRow } from '../lib/m
 import { useUserStore } from './userStore';
 import { useSettingsStore } from './settingsStore';
 import { seedFoodItemsIfEmpty, getAllFoodItems } from '../features/diet/services/foodService';
+import { readListCache, writeListCache } from '../lib/storeCache';
 
 interface FoodStore {
   foods: FoodItem[];
@@ -26,6 +27,37 @@ interface FoodStore {
 // Module-level channel so we can clean up on re-init
 let foodChannel: ReturnType<typeof supabase.channel> | null = null;
 
+function subscribeFoodRealtime() {
+  if (foodChannel) supabase.removeChannel(foodChannel);
+  foodChannel = supabase
+    .channel('food-items-realtime')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'food_items', filter: 'is_custom=eq.false' },
+      (payload) => {
+        const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
+        if (payload.eventType === 'INSERT') {
+          const newFood = dbRowToFoodItem(payload.new as Record<string, unknown>);
+          if (hiddenIds.has(newFood.id)) return;
+          useFoodStore.setState((state) => {
+            if (state.foods.some((f) => f.id === newFood.id)) return state;
+            return { foods: [...state.foods, newFood] };
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = dbRowToFoodItem(payload.new as Record<string, unknown>);
+          useFoodStore.setState((state) => ({
+            foods: state.foods.map((f) => f.id === updated.id ? updated : f),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id: string }).id;
+          useFoodStore.setState((state) => ({
+            foods: state.foods.filter((f) => f.id !== deletedId),
+          }));
+        }
+      },
+    )
+    .subscribe();
+}
+
 export const useFoodStore = create<FoodStore>((set, get) => ({
   foods: [],
   isLoaded: false,
@@ -34,48 +66,34 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
 
   initializeFromDB: async () => {
     if (get().isLoaded) return;
-    await seedFoodItemsIfEmpty();
-    const all = await getAllFoodItems();
-    const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
-    const visible = hiddenIds.size > 0 ? all.filter((f) => !hiddenIds.has(f.id)) : all;
-    set({ foods: visible, isLoaded: true });
 
-    // Clean up any existing subscription before creating a new one
-    if (foodChannel) {
-      supabase.removeChannel(foodChannel);
+    const applyHidden = (all: FoodItem[]) => {
+      const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
+      return hiddenIds.size > 0 ? all.filter((f) => !hiddenIds.has(f.id)) : all;
+    };
+
+    const cached = readListCache<FoodItem>('foods');
+    if (cached) {
+      set({ foods: applyHidden(cached), isLoaded: true });
+      subscribeFoodRealtime();
+      (async () => {
+        try {
+          await seedFoodItemsIfEmpty();
+          const fresh = await getAllFoodItems();
+          writeListCache('foods', fresh);
+          set({ foods: applyHidden(fresh) });
+        } catch (err) {
+          console.error('[foodStore] background refresh failed:', err);
+        }
+      })();
+      return;
     }
 
-    // Subscribe only to shared library rows (is_custom=false) so personal copies
-    // never propagate to other users. Server-side filter is more reliable than
-    // client-side filtering.
-    foodChannel = supabase
-      .channel('food-items-realtime')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'food_items', filter: 'is_custom=eq.false' },
-        (payload) => {
-          const hiddenIds = new Set(useSettingsStore.getState().hiddenFoodIds ?? []);
-
-          if (payload.eventType === 'INSERT') {
-            const newFood = dbRowToFoodItem(payload.new as Record<string, unknown>);
-            if (hiddenIds.has(newFood.id)) return;
-            set((state) => {
-              if (state.foods.some((f) => f.id === newFood.id)) return state;
-              return { foods: [...state.foods, newFood] };
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = dbRowToFoodItem(payload.new as Record<string, unknown>);
-            set((state) => ({
-              foods: state.foods.map((f) => f.id === updated.id ? updated : f),
-            }));
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as { id: string }).id;
-            set((state) => ({
-              foods: state.foods.filter((f) => f.id !== deletedId),
-            }));
-          }
-        },
-      )
-      .subscribe();
+    await seedFoodItemsIfEmpty();
+    const all = await getAllFoodItems();
+    writeListCache('foods', all);
+    set({ foods: applyHidden(all), isLoaded: true });
+    subscribeFoodRealtime();
   },
 
   addFood: async (data) => {
@@ -172,3 +190,9 @@ export const useFoodStore = create<FoodStore>((set, get) => ({
     });
   },
 }));
+
+useFoodStore.subscribe((state, prev) => {
+  if (state.foods !== prev.foods && state.isLoaded) {
+    writeListCache('foods', state.foods);
+  }
+});

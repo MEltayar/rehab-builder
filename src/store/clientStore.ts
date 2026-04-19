@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { clientToDbRow, clientPatchToDbRow } from '../lib/mappers';
 import { getAllClients } from '../features/clients/services/clientService';
 import { usePlanStore } from './planStore';
+import { readListCache, writeListCache } from '../lib/storeCache';
 
 interface ClientStore {
   clients: Client[];
@@ -26,7 +27,21 @@ export const useClientStore = create<ClientStore>((set, get) => ({
 
   initializeFromDB: async () => {
     if (get().isLoaded) return;
+
+    const cached = readListCache<Client>('clients');
+    if (cached) {
+      set({ clients: cached, isLoaded: true });
+      getAllClients()
+        .then((fresh) => {
+          writeListCache('clients', fresh);
+          set({ clients: fresh });
+        })
+        .catch((err) => console.error('[clientStore] background refresh failed:', err));
+      return;
+    }
+
     const all = await getAllClients();
+    writeListCache('clients', all);
     set({ clients: all, isLoaded: true });
   },
 
@@ -93,3 +108,9 @@ export const useClientStore = create<ClientStore>((set, get) => ({
     return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   },
 }));
+
+useClientStore.subscribe((state, prev) => {
+  if (state.clients !== prev.clients && state.isLoaded) {
+    writeListCache('clients', state.clients);
+  }
+});

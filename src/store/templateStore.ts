@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { dbRowToTemplate, templateToDbRow, templatePatchToDbRow } from '../lib/mappers';
+import { readListCache, writeListCache } from '../lib/storeCache';
 import type { Template } from '../types';
 
 interface TemplateStore {
@@ -19,9 +20,24 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
 
   initializeFromDB: async () => {
     if (get().isLoaded) return;
+
+    const cached = readListCache<Template>('templates');
+    if (cached) {
+      set({ templates: cached, isLoaded: true });
+      supabase.from('templates').select('*').then(({ data, error }) => {
+        if (error) { console.error('[templateStore] background refresh failed:', error); return; }
+        const fresh = (data ?? []).map(dbRowToTemplate);
+        writeListCache('templates', fresh);
+        set({ templates: fresh });
+      });
+      return;
+    }
+
     const { data, error } = await supabase.from('templates').select('*');
     if (error) throw error;
-    set({ templates: (data ?? []).map(dbRowToTemplate), isLoaded: true });
+    const templates = (data ?? []).map(dbRowToTemplate);
+    writeListCache('templates', templates);
+    set({ templates, isLoaded: true });
   },
 
   addTemplate: async (template) => {
@@ -61,3 +77,9 @@ export const useTemplateStore = create<TemplateStore>((set, get) => ({
     }
   },
 }));
+
+useTemplateStore.subscribe((state, prev) => {
+  if (state.templates !== prev.templates && state.isLoaded) {
+    writeListCache('templates', state.templates);
+  }
+});

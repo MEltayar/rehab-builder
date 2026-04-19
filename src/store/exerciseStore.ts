@@ -5,6 +5,7 @@ import { dbRowToExercise, exerciseToDbRow, exercisePatchToDbRow } from '../lib/m
 import { useUserStore } from './userStore';
 import { useSettingsStore } from './settingsStore';
 import { seedIfEmpty, seedGymExercisesIfMissing, syncGymExerciseVideos, getAllExercises } from '../features/exercises/services/exerciseService';
+import { readListCache, writeListCache } from '../lib/storeCache';
 
 interface ExerciseStore {
   exercises: Exercise[];
@@ -30,6 +31,37 @@ interface ExerciseStore {
 // Module-level channel so we can clean up on re-init
 let exerciseChannel: ReturnType<typeof supabase.channel> | null = null;
 
+function subscribeExerciseRealtime() {
+  if (exerciseChannel) supabase.removeChannel(exerciseChannel);
+  exerciseChannel = supabase
+    .channel('exercises-realtime')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'exercises', filter: 'is_custom=eq.false' },
+      (payload) => {
+        const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
+        if (payload.eventType === 'INSERT') {
+          const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
+          if (hiddenIds.has(newEx.id)) return;
+          useExerciseStore.setState((state) => {
+            if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
+            return { exercises: [...state.exercises, newEx] };
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = dbRowToExercise(payload.new as Record<string, unknown>);
+          useExerciseStore.setState((state) => ({
+            exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
+          }));
+        } else if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id: string }).id;
+          useExerciseStore.setState((state) => ({
+            exercises: state.exercises.filter((ex) => ex.id !== deletedId),
+          }));
+        }
+      },
+    )
+    .subscribe();
+}
+
 export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   exercises: [],
   isLoaded: false,
@@ -41,50 +73,45 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
   initializeFromDB: async () => {
     if (get().isLoaded || get().isInitializing) return;
     set({ isInitializing: true });
-    await seedIfEmpty();
-    await seedGymExercisesIfMissing();
-    await syncGymExerciseVideos();
-    const all = await getAllExercises();
-    const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
-    const visible = hiddenIds.size > 0 ? all.filter((ex) => !hiddenIds.has(ex.id)) : all;
-    set({ exercises: visible, isLoaded: true, isInitializing: false });
 
-    // Clean up any existing subscription before creating a new one
-    if (exerciseChannel) {
-      supabase.removeChannel(exerciseChannel);
+    const applyHidden = (all: Exercise[]) => {
+      const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
+      return hiddenIds.size > 0 ? all.filter((ex) => !hiddenIds.has(ex.id)) : all;
+    };
+
+    const cached = readListCache<Exercise>('exercises');
+    if (cached) {
+      set({ exercises: applyHidden(cached), isLoaded: true });
+      subscribeExerciseRealtime();
+      (async () => {
+        try {
+          await seedIfEmpty();
+          await seedGymExercisesIfMissing();
+          await syncGymExerciseVideos();
+          const fresh = await getAllExercises();
+          writeListCache('exercises', fresh);
+          set({ exercises: applyHidden(fresh) });
+        } catch (err) {
+          console.error('[exerciseStore] background refresh failed:', err);
+        } finally {
+          set({ isInitializing: false });
+        }
+      })();
+      return;
     }
 
-    // Subscribe only to shared library rows (is_custom=false) so personal copies
-    // never propagate to other users. Server-side filter is more reliable than
-    // client-side filtering.
-    exerciseChannel = supabase
-      .channel('exercises-realtime')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'exercises', filter: 'is_custom=eq.false' },
-        (payload) => {
-          const hiddenIds = new Set(useSettingsStore.getState().hiddenExerciseIds ?? []);
-
-          if (payload.eventType === 'INSERT') {
-            const newEx = dbRowToExercise(payload.new as Record<string, unknown>);
-            if (hiddenIds.has(newEx.id)) return;
-            set((state) => {
-              if (state.exercises.some((ex) => ex.id === newEx.id)) return state;
-              return { exercises: [...state.exercises, newEx] };
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updated = dbRowToExercise(payload.new as Record<string, unknown>);
-            set((state) => ({
-              exercises: state.exercises.map((ex) => ex.id === updated.id ? updated : ex),
-            }));
-          } else if (payload.eventType === 'DELETE') {
-            const deletedId = (payload.old as { id: string }).id;
-            set((state) => ({
-              exercises: state.exercises.filter((ex) => ex.id !== deletedId),
-            }));
-          }
-        },
-      )
-      .subscribe();
+    try {
+      await seedIfEmpty();
+      await seedGymExercisesIfMissing();
+      await syncGymExerciseVideos();
+      const all = await getAllExercises();
+      writeListCache('exercises', all);
+      set({ exercises: applyHidden(all), isLoaded: true, isInitializing: false });
+      subscribeExerciseRealtime();
+    } catch (err) {
+      console.error('[exerciseStore] initial load failed:', err);
+      set({ isInitializing: false });
+    }
   },
 
   addExercise: async (data) => {
@@ -182,3 +209,9 @@ export const useExerciseStore = create<ExerciseStore>((set, get) => ({
     return [...new Set(tags)].sort();
   },
 }));
+
+useExerciseStore.subscribe((state, prev) => {
+  if (state.exercises !== prev.exercises && state.isLoaded) {
+    writeListCache('exercises', state.exercises);
+  }
+});

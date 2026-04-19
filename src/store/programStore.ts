@@ -6,6 +6,7 @@ import type { Program, Session, ProgramExercise, Template } from '../types';
 import { getAllPrograms } from '../features/programs/services/programService';
 import { usePlanStore } from './planStore';
 import { useSettingsStore } from './settingsStore';
+import { readListCache, writeListCache } from '../lib/storeCache';
 
 interface ProgramStore {
   programs: Program[];
@@ -49,7 +50,21 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
 
   initializeFromDB: async () => {
     if (get().isLoaded) return;
+
+    const cached = readListCache<Program>('programs');
+    if (cached) {
+      set({ programs: cached, isLoaded: true });
+      getAllPrograms()
+        .then((fresh) => {
+          writeListCache('programs', fresh);
+          set({ programs: fresh });
+        })
+        .catch((err) => console.error('[programStore] background refresh failed:', err));
+      return;
+    }
+
     const all = await getAllPrograms();
+    writeListCache('programs', all);
     set({ programs: all, isLoaded: true });
   },
 
@@ -294,3 +309,9 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
     });
   },
 }));
+
+useProgramStore.subscribe((state, prev) => {
+  if (state.programs !== prev.programs && state.isLoaded) {
+    writeListCache('programs', state.programs);
+  }
+});
