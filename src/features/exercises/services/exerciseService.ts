@@ -1,6 +1,5 @@
 import { supabase } from '../../../lib/supabase';
 import { dbRowToExercise, exerciseToDbRow } from '../../../lib/mappers';
-import { useUserStore } from '../../../store/userStore';
 import type { Exercise } from '../../../types';
 
 // Seed data is dynamic-imported inside seeding functions only, so its

@@ -1,6 +1,5 @@
 import { supabase } from '../../../lib/supabase';
 import { dbRowToFoodItem, foodItemToDbRow } from '../../../lib/mappers';
-import { useUserStore } from '../../../store/userStore';
 import type { FoodItem } from '../../../types';
 
 // Seed data lives in ./foodSeed — dynamic-imported inside the seeder only,
