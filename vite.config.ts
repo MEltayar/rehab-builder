@@ -41,6 +41,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'icons':        ['lucide-react'],
           'pdf':          ['@react-pdf/renderer'],
           'excel':        ['exceljs'],
           'dnd':          ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
