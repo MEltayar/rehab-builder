@@ -43,15 +43,15 @@ export default function ClinicDetailsSection({
 
   const labels = isGym
     ? {
-        section: 'Gym Details',
-        infoText: "Your gym's name, logo, and contact details appear on every exported training plan and PDF sent to clients.",
-        name: 'Gym Name',
-        namePlaceholder: 'e.g. FitLife Gym',
-        logo: 'Gym Logo',
+        section: 'Personal Trainer Details',
+        infoText: "Your name, logo, and contact details appear on every exported training plan and PDF sent to clients.",
+        name: 'Name',
+        namePlaceholder: 'e.g. Peak Performance Training',
+        logo: 'Logo',
         whatsappPlaceholder: '+1 555 123 4567',
-        gmailPlaceholder: 'gym@gmail.com',
-        instagramPlaceholder: 'https://instagram.com/yourgym',
-        facebookPlaceholder: 'https://facebook.com/yourgym',
+        gmailPlaceholder: 'contact@gmail.com',
+        instagramPlaceholder: 'https://instagram.com/yourbrand',
+        facebookPlaceholder: 'https://facebook.com/yourbrand',
       }
     : {
         section: 'Clinic Details',

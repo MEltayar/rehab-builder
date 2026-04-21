@@ -187,11 +187,11 @@ export default function DashboardPage() {
             <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                {isGym ? 'Gym profile is incomplete' : 'Clinic profile is incomplete'}
+                {isGym ? 'Your profile is incomplete' : 'Clinic profile is incomplete'}
               </p>
               <p className="text-xs text-amber-600 dark:text-amber-400">
                 {isGym
-                  ? 'Add your gym name and logo so training plan exports look professional.'
+                  ? 'Add your name and logo so training plan exports look professional.'
                   : 'Add your clinic name and logo so exports look professional.'}
               </p>
             </div>
