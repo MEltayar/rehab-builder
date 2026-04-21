@@ -55,9 +55,9 @@ export default function ProfileTypeSection({ value, onChange }: Props) {
           />
           <div>
             <p className={`text-sm font-semibold ${value === 'gym' ? 'text-orange-600 dark:text-orange-300' : 'text-gray-800 dark:text-gray-200'}`}>
-              Gym Coaching
+              Personal Training
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Gym · Client · Focus Area · Weight (kg)</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Trainer · Client · Focus Area · Weight (kg)</p>
           </div>
         </button>
       </div>

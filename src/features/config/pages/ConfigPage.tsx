@@ -102,7 +102,7 @@ export default function ConfigPage() {
           <div className="flex items-center gap-2">
             <Lock size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Configuration is available on Pro. Upgrade to save your {profileType === 'gym' ? 'gym' : 'clinic'} details and templates.
+              Configuration is available on Pro. Upgrade to save your details and templates.
             </p>
           </div>
           <button

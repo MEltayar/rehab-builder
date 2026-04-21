@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
           <div>
             <p className="text-sm font-bold tracking-tight text-white leading-none">Full Range Lab</p>
-            <p className="text-[10px] text-orange-300 mt-0.5 font-medium tracking-wide">{isGym ? 'Gym Coaching' : 'Physiotherapy'}</p>
+            <p className="text-[10px] text-orange-300 mt-0.5 font-medium tracking-wide">{isGym ? 'Personal Training' : 'Physiotherapy'}</p>
           </div>
         </div>
         <button

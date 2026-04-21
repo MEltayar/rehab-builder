@@ -20,7 +20,7 @@ export default function EmailTemplateSection({ values, onChange, profileType = '
     : 'This subject and body are pre-filled whenever you send a rehab sheet via email. You can edit them before sending.';
 
   const subjectPlaceholder = isGym
-    ? 'e.g. Your Training Plan from FitLife Gym'
+    ? 'e.g. Your Training Plan from Peak Performance'
     : 'e.g. Your Rehab Program from City Physio';
 
   const bodyPlaceholder = isGym
