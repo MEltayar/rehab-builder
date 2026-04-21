@@ -183,9 +183,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         .single();
 
       if (error && error.code === 'PGRST116') {
-        const defaults: AppSettings = { clinicName: '', darkMode: false, profileType: 'physio' };
-        writeCache(defaults);
-        set({ isLoaded: true, profileType: 'physio' });
+        // New user — leave profileType undefined so ProtectedRoute sends them to /onboarding
+        set({ isLoaded: true });
         return;
       }
 
@@ -197,7 +196,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       applyDarkMode(settings.darkMode);
     } catch (err) {
       console.error('Failed to initialize settings from DB:', err);
-      set({ isLoaded: true, profileType: get().profileType ?? 'physio' });
+      set({ isLoaded: true });
     }
   },
 }));
