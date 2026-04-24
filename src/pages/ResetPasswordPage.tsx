@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import {
+  PASSWORD_PLACEHOLDER,
+  cleanupPasswordError,
+  validatePassword,
+} from '../lib/passwordValidation';
 
 export default function ResetPasswordPage() {
   const updatePassword = useAuthStore((s) => s.updatePassword);
@@ -44,14 +49,15 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
     if (password !== confirm) { setError('Passwords do not match'); return; }
-    if (password.length < 6)  { setError('Password must be at least 6 characters'); return; }
+    const pwErr = validatePassword(password);
+    if (pwErr) { setError(pwErr); return; }
     setLoading(true);
     try {
       await updatePassword(password);
       setDone(true);
       setTimeout(() => navigate('/'), 2500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update password');
+      setError(err instanceof Error ? cleanupPasswordError(err.message) : 'Failed to update password');
     } finally {
       setLoading(false);
     }
@@ -160,7 +166,7 @@ export default function ResetPasswordPage() {
                     style={{ background: 'rgba(255,255,255,0.06)' }}>
                     <Lock size={15} className="absolute left-3.5 text-white/30 shrink-0 pointer-events-none" />
                     <input type={showPass ? 'text' : 'password'} required value={password}
-                      onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters"
+                      onChange={(e) => setPassword(e.target.value)} placeholder={PASSWORD_PLACEHOLDER}
                       className="w-full pl-9 pr-10 py-3 text-sm bg-transparent text-white placeholder-white/25 focus:outline-none" />
                     <button type="button" onClick={() => setShowPass(!showPass)}
                       className="absolute right-3 text-white/30 hover:text-white/65 transition-colors p-0.5">
